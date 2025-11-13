@@ -17,26 +17,22 @@ jobs:
           OWNER: s11-25-equipo-48-WebApp
           REPO: backend
         run: |
-          # Carpeta donde están los archivos exportados de Notion
           ISSUE_DIR="./.notion_issues"
 
-          # Iterar todos los archivos .md
           for file in $ISSUE_DIR/*.md; do
             echo "Procesando $file"
 
-            # Extraer título: primera línea que empieza con #
             TITLE=$(head -n 1 "$file" | sed 's/^# //')
+            BODY=$(tail -n +2 "$file")
 
-            # Extraer el cuerpo: todo el archivo
-            BODY=$(cat "$file" | sed '1d') # elimina la primera línea para que no se duplique el título
-
-            # Reemplaza comillas dobles para que JSON no falle
-            BODY_JSON=$(echo "$BODY" | sed 's/"/\\"/g')
+            # Usar jq para generar JSON seguro
+            JSON_PAYLOAD=$(jq -n --arg title "$TITLE" --arg body "$BODY" '{title: $title, body: $body}')
 
             # Crear issue
             curl -s -X POST \
               -H "Authorization: token $TOKEN" \
               -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
               https://api.github.com/repos/$OWNER/$REPO/issues \
-              -d "{\"title\":\"$TITLE\",\"body\":\"$BODY_JSON\"}"
+              -d "$JSON_PAYLOAD"
           done
