@@ -18,7 +18,7 @@ jobs:
           REPO: backend
         run: |
           # Carpeta donde están los archivos exportados de Notion
-          ISSUE_DIR="./notion_issues"
+          ISSUE_DIR="./.notion_issues"
 
           # Iterar todos los archivos .md
           for file in $ISSUE_DIR/*.md; do
