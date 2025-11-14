@@ -23,7 +23,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  if (configService.get('NODE_ENV') === 'development') {
     const opts = new DocumentBuilder()
       .setTitle('CMS API')
       .setDescription('Documentación API para el CMS')
@@ -33,7 +32,7 @@ async function bootstrap() {
 
     const doc = SwaggerModule.createDocument(app, opts);
     SwaggerModule.setup('docs', app, doc);
-  }
+  
 
   const port = configService.getOrThrow<number>('port');
   await app.listen(port);
@@ -41,6 +40,4 @@ async function bootstrap() {
 }
 
 bootstrap();
-// src/main.ts
-// comentariosdfsdf
 
