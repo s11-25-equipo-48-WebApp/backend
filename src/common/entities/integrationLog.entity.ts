@@ -5,10 +5,10 @@ export class IntegrationLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   provider: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   operation: string;
 
   @Column({ type: 'jsonb', default: {} })
@@ -20,7 +20,7 @@ export class IntegrationLog {
   @Column({ type: 'int' })
   response_code: number;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   success: boolean;
 
   @CreateDateColumn()

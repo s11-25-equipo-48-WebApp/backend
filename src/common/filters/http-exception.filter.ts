@@ -1,6 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { PinoLogger } from 'src/infra/Logger/logger.service';
+import { PinoLogger } from '../../infra/Logger/logger.service';
+//import { PinoLogger } from 'src/infra/Logger/logger.service';
 
 
 @Catch()

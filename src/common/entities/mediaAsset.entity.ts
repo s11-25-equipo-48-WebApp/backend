@@ -8,16 +8,16 @@ export class MediaAsset {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   public_id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   secure_url: string;
 
   @Column({ type: 'enum', enum: MediaType })
-  resource_type: express.MediaType;
+  resource_type: MediaType;
 
-  @Column()
+  @Column({ type: 'varchar' })
   mime_type: string;
 
   @Column({ type: 'int' })

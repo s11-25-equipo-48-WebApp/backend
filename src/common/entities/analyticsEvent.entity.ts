@@ -20,13 +20,13 @@ export class AnalyticsEvent {
   @Column({ type: 'timestamp' })
   occurred_at: Date;
 
-  @Column()
+  @Column({ type: 'varchar' })
   ip_address: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   user_agent: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   referrer: string;
 
   @Column({ type: 'jsonb', default: {} })

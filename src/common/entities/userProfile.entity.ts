@@ -11,8 +11,8 @@ export class UserProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
-  avatar_url: string;
+  @Column({ type: 'varchar', nullable: true })
+  avatar_url: string | null;
 
   @Column({ type: 'text' })
   bio: string;

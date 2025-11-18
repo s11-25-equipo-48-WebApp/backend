@@ -7,10 +7,10 @@ export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   description: string;
 
   @ManyToOne(() => User, (user) => user.projects, { onDelete: 'CASCADE' })

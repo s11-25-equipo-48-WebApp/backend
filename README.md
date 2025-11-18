@@ -90,17 +90,20 @@ Este proyecto está construido utilizando el framework **NestJS** para el backen
 Los siguientes scripts están definidos en `package.json` para facilitar el desarrollo, la construcción, las pruebas y la gestión de la base de datos:
 
 *`build`: Compila la aplicación NestJS para producción.
-*`format`: Formatea el código fuente utilizando Prettier.
+*`format`: Formatea el código fuente utilizando Prettier para mantener la consistencia del estilo.
 *`start`: Inicia la aplicación NestJS.
-*`start:dev`: Inicia la aplicación en modo de desarrollo con recarga en caliente.
-*`start:debug`: Inicia la aplicación en modo de depuración con recarga en caliente.
+*`start:dev`: Inicia la aplicación en modo de desarrollo con recarga en caliente (`--watch`) para una experiencia de desarrollo ágil.
+*`start:debug`: Inicia la aplicación en modo de depuración con recarga en caliente, permitiendo la inspección del código.
 *`start:prod`: Inicia la aplicación compilada en modo de producción.
-*`lint`: Ejecuta ESLint para analizar y corregir problemas de código.
-*`test`: Ejecuta las pruebas unitarias y de integración.
-*`test:watch`: Ejecuta las pruebas en modo de observación.
+*`lint`: Ejecuta ESLint para analizar el código, identificar problemas y aplicar correcciones automáticas.
+*`test`: Ejecuta las pruebas unitarias y de integración con Jest.
+*`test:watch`: Ejecuta las pruebas en modo de observación, re-ejecutando solo los tests afectados por cambios.
 *`test:cov`: Ejecuta las pruebas y genera un informe de cobertura de código.
 *`test:debug`: Ejecuta las pruebas en modo de depuración.
-*`test:e2e`: Ejecuta las pruebas end-to-end.
-*`migration:generate`: Genera una nueva migración de TypeORM.
-*`migration:run`: Ejecuta las migraciones pendientes de TypeORM.
-*`migration:revert`: Revierte la última migración de TypeORM.
+*`test:e2e`: Ejecuta las pruebas end-to-end con Jest, utilizando una configuración específica.
+*`migration:generate`: Genera una nueva migración de TypeORM, creando un archivo con los cambios detectados en las entidades.
+*`migration:run`: Ejecuta las migraciones pendientes de TypeORM, aplicando los cambios a la base de datos.
+*`migration:revert`: Revierte la última migración de TypeORM aplicada.
+*`db:drop`: Elimina la base de datos. **¡Usar con precaución!**
+*`db:truncate`: Trunca todas las tablas de la base de datos. **¡Usar con precaución!**
+*`db:reset`: Restablece la base de datos (puede implicar drop, create y run migrations).

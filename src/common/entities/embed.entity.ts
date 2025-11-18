@@ -19,10 +19,10 @@ export class Embed {
   @Column({ type: 'int' })
   height: number;
 
-  @Column()
+  @Column({ type: 'varchar' })
   theme: string;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   autoplay: boolean;
 
   @CreateDateColumn()

@@ -1,4 +1,7 @@
-    export default () => ({
+import { config } from 'dotenv';
+config();
+
+export default () => ({
     port: Number(process.env.PORT),
     nodeEnv: process.env.NODE_ENV,
     database: {
@@ -9,4 +12,4 @@
         name: process.env.DB_NAME,
     },
     sentryDsn: process.env.SENTRY_DSN ?? '',
-    });
+});

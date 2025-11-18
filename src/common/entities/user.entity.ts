@@ -10,19 +10,19 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, type: 'varchar' })
   email: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   password_hash: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   name: string;
 
   @Column({ type: 'enum', enum: Role, default: Role.ADMIN })
   role: Role;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
   @CreateDateColumn()

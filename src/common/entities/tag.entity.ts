@@ -6,7 +6,7 @@ export class Tag {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, type: 'varchar' })
   name: string;
 
   @CreateDateColumn()

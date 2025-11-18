@@ -12,7 +12,7 @@ export class Testimonial {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   title: string;
 
   @Column({ type: 'text' })
@@ -24,7 +24,7 @@ export class Testimonial {
   @Column({ type: 'enum', enum: MediaType, default: MediaType.NONE })
   media_type: MediaType;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   broken_media: boolean;
 
   @ManyToOne(() => User, (u) => u.testimonials)

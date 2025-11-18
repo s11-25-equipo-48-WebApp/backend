@@ -13,10 +13,10 @@ export class AuditLog {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
+  @Column({ type: 'varchar' })
   action: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   target_type: string;
 
   @Column('uuid')
