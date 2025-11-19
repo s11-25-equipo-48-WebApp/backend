@@ -1,31 +1,36 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-import { validateEnv } from './config/env.validation';
-import configuration from './config/configuration';
-
-import { APP_FILTER } from '@nestjs/core';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
-import { PinoLogger } from './infra/Logger/logger.service';
-
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { AuthModule } from "./auth/auth.module";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
+import { APP_FILTER } from "@nestjs/core";
+import { AllExceptionsFilter } from "./common/filters/http-exception.filter";
+import { LoggerModule } from "./infra/Logger/logger.module";
+import { TypeOrmConfigService } from "./config/typeorm.config";
+import { TestingModule } from "./testing/testing.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
-      validate: validateEnv,
     }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useClass: TypeOrmConfigService,
+    }),
+    LoggerModule,
+    AuthModule,
+    TestingModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    PinoLogger,
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
+    TypeOrmConfigService,
   ],
 })
 export class AppModule {}

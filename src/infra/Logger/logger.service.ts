@@ -1,17 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import pino from 'pino';
+import ConfigEnvs from '../../config/envs';
 
 @Injectable()
 export class PinoLogger {
-  private logger = pino({
-    level: process.env.LOG_LEVEL || 'info',
-    transport: process.env.NODE_ENV !== 'production'
+  private logger = pino(
+    ConfigEnvs.NODE_ENV !== 'production'
       ? {
-          target: 'pino-pretty',
-          options: { colorize: true },
+          level: 'debug',
+          transport: {
+            target: 'pino-pretty',
+            options: { colorize: true, singleLine: true },
+          },
         }
-      : undefined,
-  });
+      : { level: 'info' }
+  );
 
   log(message: string, ...meta: any[]) {
     this.logger.info({ msg: message, meta });
