@@ -7,7 +7,7 @@ on:
 
 jobs:
   trigger-deploy:
-    name: 🔧 Disparar Despliegue y Validación
+    name: 🔧 Desplegar y Validar
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +31,6 @@ jobs:
 
           if [ -z "$JSON" ]; then
             echo "❌ No se pudo obtener el JSON."
-            echo "json_error=true" >> $GITHUB_OUTPUT
             exit 1
           fi
 
@@ -44,13 +43,18 @@ jobs:
           echo "$ENDPOINTS"
           echo "-------------------------------"
 
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
-          echo "list=$ENDPOINTS" >> $GITHUB_OUTPUT
+          # Guardar COUNT normalmente
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # Guardar ENDPOINTS multilínea
+          {
+            echo "list<<EOF"
+            echo "$ENDPOINTS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: 🔔 Enviar resultado a Discord
         run: |
-          echo "Enviando mensaje a Discord..."
-
           COUNT="${{ steps.swagger.outputs.count }}"
           ENDPOINTS="${{ steps.swagger.outputs.list }}"
 
