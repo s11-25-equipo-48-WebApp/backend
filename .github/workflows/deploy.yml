@@ -7,36 +7,42 @@ on:
 
 jobs:
   trigger-deploy:
-    name: 🔧 Disparar Despliegue + Verificación
+    name: 🔧 Despliegue + Verificación
     runs-on: ubuntu-latest
 
     steps:
       - name: ⚙️ Preparando entorno
         run: |
-          echo "Iniciando workflow..."
-          # Instalar jq para el procesamiento de JSON en el paso de verificación de Swagger
           sudo apt-get update && sudo apt-get install -y jq
 
-      - name: 📡 Llamando al Webhook de Render
+      - name: 📡 Ejecutando Webhook de Render
         run: |
-          echo "Ejecutando hook..."
-          # Llama al webhook secreto de Render para iniciar el despliegue
           curl -X POST "${{ secrets.RENDER_HOOK }}"
-          echo "Hook enviado correctamente, iniciando despliegue en Render ✔️"
 
-      - name: 📚 Obtener lista de endpoints desde Swagger (Verificación API)
+      - name: ⏳ Esperar a que la API se levante (retry)
+        run: |
+          for i in {1..10}; do
+            echo "Intento $i/10 verificando API..."
+            if curl -fs https://backend-jnqc.onrender.com/docs-json > /dev/null; then
+              echo "API disponible ✔️"
+              exit 0
+            fi
+            echo "No disponible aún... esperando 5s"
+            sleep 5
+          done
+          echo "❌ API no respondió."
+          exit 1
+
+      - name: 📚 Obtener lista de endpoints desde Swagger
         run: |
           echo "Descargando spec OpenAPI..."
           JSON=$(curl -fs https://backend-jnqc.onrender.com/docs-json)
 
           if [ -z "$JSON" ]; then
-            echo "❌ Falló la descarga del spec OpenAPI (docs-json). El endpoint puede no estar disponible o el JSON está vacío."
+            echo "❌ Falló la descarga del spec OpenAPI."
             exit 1
           fi
 
-          echo "✔️ Spec obtenido. Extrayendo endpoints..."
-
-          # Usa jq para extraer las rutas (keys) del objeto 'paths'
           ENDPOINTS=$(echo "$JSON" | jq -r '.paths | keys[]')
           COUNT=$(echo "$JSON" | jq '.paths | length')
 
@@ -47,7 +53,8 @@ jobs:
           echo "-------------------------------"
 
           if [ "$COUNT" -eq 0 ]; then
-            echo "❌ No se encontraron endpoints. Swagger falló al mostrar rutas."
+            echo "❌ No se encontraron endpoints."
             exit 1
           fi
-          echo "Verificación de endpoints exitosa. Despliegue completo. ✅"
+
+          echo "Verificación final exitosa. 👍"
