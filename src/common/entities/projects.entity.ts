@@ -5,21 +5,21 @@ import { Testimonial } from "./testimonial.entity";
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar' })
-  name: string;
+  name!: string;
 
   @Column({ type: 'varchar', nullable: true })
-  description: string;
+  description!: string;
 
   @ManyToOne(() => User, (user) => user.projects, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column('uuid')
-  user_id: string;
+  user_id!: string;
 
   @OneToMany(() => Testimonial, (testimonial) => testimonial.project)
-  testimonials: Testimonial[];
+  testimonials!: Testimonial[];
 }

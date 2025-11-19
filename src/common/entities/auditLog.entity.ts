@@ -4,30 +4,30 @@ import { User } from "./user.entity";
 @Entity('audit_logs')
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
-  user_id: string;
+  user_id!: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'varchar' })
-  action: string;
+  action!: string;
 
   @Column({ type: 'varchar' })
-  target_type: string;
+  target_type!: string;
 
   @Column('uuid')
-  target_id: string;
+  target_id!: string;
 
   @Column({ type: 'jsonb', default: {} })
   diff: any;
 
   @Column({ type: 'text', nullable: true })
-  comment: string;
+  comment!: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }

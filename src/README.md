@@ -100,3 +100,9 @@ Los siguientes scripts están definidos en `package.json` para facilitar el desa
 *`test:cov`: Ejecuta las pruebas y genera un informe de cobertura de código.
 *`test:debug`: Ejecuta las pruebas en modo de depuración.
 *`test:e2e`: Ejecuta las pruebas end-to-end con Jest, utilizando una configuración específica.
+*`migration:generate`: Genera una nueva migración de TypeORM, creando un archivo con los cambios detectados en las entidades.
+*`migration:run`: Ejecuta las migraciones pendientes de TypeORM, aplicando los cambios a la base de datos.
+*`migration:revert`: Revierte la última migración de TypeORM aplicada.
+*`db:drop`: Elimina la base de datos. **¡Usar con precaución!**
+*`db:truncate`: Trunca todas las tablas de la base de datos. **¡Usar con precaución!**
+*`db:reset`: Restablece la base de datos (puede implicar drop, create y run migrations).

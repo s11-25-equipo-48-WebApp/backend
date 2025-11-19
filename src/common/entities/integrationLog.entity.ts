@@ -3,13 +3,13 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeor
 @Entity('integration_logs')
 export class IntegrationLog {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar' })
-  provider: string;
+  provider!: string;
 
   @Column({ type: 'varchar' })
-  operation: string;
+  operation!: string;
 
   @Column({ type: 'jsonb', default: {} })
   request_payload: any;
@@ -18,11 +18,11 @@ export class IntegrationLog {
   response_payload: any;
 
   @Column({ type: 'int' })
-  response_code: number;
+  response_code!: number;
 
   @Column({ type: 'boolean', default: false })
-  success: boolean;
+  success!: boolean;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }

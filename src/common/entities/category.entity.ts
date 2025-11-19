@@ -4,20 +4,20 @@ import { Testimonial } from "./testimonial.entity";
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: "varchar", length: 150 })
-  name: string;
+  name!: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @OneToMany(() => Testimonial, (t) => t.category)
-  testimonials: Testimonial[];
+  testimonials!: Testimonial[];
 }

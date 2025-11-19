@@ -5,19 +5,19 @@ import { Tag } from "./tag.entity";
 @Entity('testimonial_tags')
 export class TestimonialTag {
   @PrimaryColumn('uuid')
-  testimonial_id: string;
+  testimonial_id!: string;
 
   @PrimaryColumn('uuid')
-  tag_id: string;
+  tag_id!: string;
 
   @ManyToOne(() => Testimonial, (t) => t.tags, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'testimonial_id' })
-  testimonial: Testimonial;
+  testimonial!: Testimonial;
 
   @ManyToOne(() => Tag, (tag) => tag.testimonialTags, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tag_id' })
-  tag: Tag;
+  tag!: Tag;
 
   @CreateDateColumn()
-  added_at: Date;
+  added_at!: Date;
 }

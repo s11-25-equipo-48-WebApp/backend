@@ -8,41 +8,41 @@ import { Project } from "./projects.entity";
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true, type: 'varchar' })
-  email: string;
+  email!: string;
 
   @Column({ type: 'varchar' })
-  password_hash: string;
+  password_hash!: string;
 
   @Column({ type: 'varchar' })
-  name: string;
+  name!: string;
 
   @Column({ type: 'enum', enum: Role, default: Role.ADMIN })
-  role: Role;
+  role!: Role;
 
   @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  is_active!: boolean;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @Column({ type: 'timestamp', nullable: true })
   deactivated_at?: Date;
 
   @OneToOne(() => UserProfile, (p) => p.user)
-  profile: UserProfile;
+  profile!: UserProfile;
 
   @OneToMany(() => Testimonial, (t) => t.author)
-  testimonials: Testimonial[];
+  testimonials!: Testimonial[];
 
   @OneToMany(() => AuthToken, (t) => t.user)
-  tokens: AuthToken[];
+  tokens!: AuthToken[];
 
   @OneToMany(() => Project, (project) => project.user)
-  projects: Project[];
+  projects!: Project[];
 }

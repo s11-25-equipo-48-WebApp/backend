@@ -10,59 +10,59 @@ import { Project } from "./projects.entity";
 @Entity('testimonials')
 export class Testimonial {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar' })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text' })
-  body: string;
+  body!: string;
 
   @Column({ type: 'enum', enum: Status, default: Status.PENDIENTE })
-  status: Status;
+  status!: Status;
 
   @Column({ type: 'enum', enum: MediaType, default: MediaType.NONE })
-  media_type: MediaType;
+  media_type!: MediaType;
 
   @Column({ type: 'boolean', default: false })
-  broken_media: boolean;
+  broken_media!: boolean;
 
   @ManyToOne(() => User, (u) => u.testimonials)
   @JoinColumn({ name: 'author_id' })
-  author: User;
+  author!: User;
 
   @Column('uuid')
-  author_id: string;
+  author_id!: string;
 
   @ManyToOne(() => Category, (c) => c.testimonials)
   @JoinColumn({ name: 'category_id' })
-  category: Category;
+  category!: Category;
 
   @Column('uuid')
-  category_id: string;
+  category_id!: string;
 
   @ManyToOne(() => Project, (p) => p.testimonials, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'project_id' })
-  project: Project;
+  project!: Project;
 
   @OneToMany(() => TestimonialTag, (tt) => tt.testimonial)
-  tags: TestimonialTag[];
+  tags!: TestimonialTag[];
 
   @OneToMany(() => AnalyticsEvent, (a) => a.testimonial)
-  analytics: AnalyticsEvent[];
+  analytics!: AnalyticsEvent[];
 
   @OneToMany(() => Embed, (e) => e.testimonial)
-  embeds: Embed[];
+  embeds!: Embed[];
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @DeleteDateColumn()
   deleted_at?: Date;
 
   @Column({ type: 'tsvector', select: false, nullable: true })
-  search_vector: string;
+  search_vector!: string;
 }
