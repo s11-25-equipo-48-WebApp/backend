@@ -1,13 +1,22 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import ConfigEnvs from './config/envs';
+import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser'; // Corregir la importación de cookie-parser
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  const configService = app.get(ConfigService);
+  app.use(cookieParser()); // Usar el middleware cookie-parser
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true, // requiere class-transformer
+    }),
+  );
 
   app.setGlobalPrefix('api/v1');
 
@@ -18,26 +27,33 @@ async function bootstrap() {
   }));
 
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-    const opts = new DocumentBuilder()
-      .setTitle('CMS API')
-      .setDescription('Documentación API para el CMS')
-      .setVersion('1.0')
-      .addTag('cms')
-      .build();
+  const opts = new DocumentBuilder()
+  .setTitle('CMS API')
+  .setDescription('Documentación API para el CMS')
+  .setVersion('1.0')
+  .addTag('cms')
+  .addBearerAuth(
+    {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    },
+    'access-token',
+  )
+  .build();
 
-    const doc = SwaggerModule.createDocument(app, opts);
-    SwaggerModule.setup('docs', app, doc);
-  
+  const doc = SwaggerModule.createDocument(app, opts);
+  SwaggerModule.setup('docs', app, doc);
 
-  const port = configService.getOrThrow<number>('port');
+
+  const port = ConfigEnvs.PORT;
   await app.listen(port);
 
 }
 
 bootstrap();
-
