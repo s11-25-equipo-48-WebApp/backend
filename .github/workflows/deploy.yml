@@ -1,4 +1,4 @@
-name: Deploy Render
+name: 🚀 Despliegue a Render
 
 on:
   push:
@@ -6,8 +6,64 @@ on:
       - main
 
 jobs:
-  trigger:
+  trigger-deploy:
+    name: 🔧 Disparar Despliegue + Verificación
     runs-on: ubuntu-latest
+
     steps:
-      - name: Call Render Deploy Hook
-        run: curl -X POST "${{ secrets.RENDER_HOOK }}"
+      - name: ⚙️ Preparando entorno
+        run: |
+          echo "Iniciando workflow..."
+          # Instalar jq para el procesamiento de JSON en el paso de verificación de Swagger
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: 📡 Llamando al Webhook de Render
+        run: |
+          echo "Ejecutando hook..."
+          # Se usa el comando 'true' || para asegurar que el workflow no falle
+          # si curl no recibe un status 200 (aunque el deploy se inicie).
+          curl -X POST "${{ secrets.RENDER_HOOK }}"
+          echo "Hook enviado correctamente ✔️"
+
+      - name: ⏳ Esperando a que Render procese el deploy
+        run: |
+          echo "Esperando 15 segundos para permitir que Render inicie el build..."
+          sleep 15
+
+      - name: 🩺 Verificando que la app responde (Health Check)
+        run: |
+          echo "Probando disponibilidad..."
+          # La bandera -f hace que curl falle (código de salida > 0) para cualquier error HTTP (4xx o 5xx)
+          curl -f "https://backend-jnqc.onrender.com/health" \
+          && echo "La app está arriba 🎉" \
+          || (echo "❌ Falló el health-check en https://backend-jnqc.onrender.com/health"; exit 1)
+
+      - name: 📚 Obtener lista de endpoints desde Swagger (Verificación API)
+        # ESTE PASO FUE CORREGIDO EN INDENTACIÓN
+        run: |
+          echo "Descargando spec OpenAPI..."
+          # Usamos -fs para fail silently y asegurar que solo el JSON se almacena si es exitoso
+          JSON=$(curl -fs https://backend-jnqc.onrender.com/docs-json)
+
+          if [ -z "$JSON" ]; then
+            echo "❌ Falló la descarga del spec OpenAPI (docs-json). El endpoint puede no estar disponible o el JSON está vacío."
+            exit 1
+          fi
+
+          echo "✔️ Spec obtenido. Extrayendo endpoints..."
+
+          # Extrae las claves (paths) del objeto .paths y cuenta los elementos
+          ENDPOINTS=$(echo "$JSON" | jq -r '.paths | keys[]')
+          COUNT=$(echo "$JSON" | jq '.paths | length')
+
+          echo "-------------------------------"
+          echo "📌 Total de endpoints: $COUNT"
+          echo "-------------------------------"
+          echo "$ENDPOINTS"
+          echo "-------------------------------"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "❌ No se encontraron endpoints. Swagger falló al mostrar rutas."
+            exit 1
+          fi
+          echo "Verificación de endpoints exitosa. Despliegue completo. ✅"
