@@ -1,4 +1,4 @@
-name: 🚀 Deploy Render
+name: 🚀 Despliegue a Render + Verificación API + Notificación Discord
 
 on:
   push:
@@ -7,42 +7,64 @@ on:
 
 jobs:
   trigger-deploy:
-    name: 🔧 Disparar Deploy + Notificación
+    name: 🔧 Disparar Despliegue y Validación
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⚙️ Checkout
-        uses: actions/checkout@v4
-
-      - name: 📡 Llamar a Render Deploy Hook
+      - name: ⚙️ Preparando entorno
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
-          --fail
+          echo "Iniciando workflow..."
+          sudo apt-get update
+          sudo apt-get install -y jq
 
-      - name: ⏱️ Esperar 15 segundos
-        run: sleep 15
-
-      - name: 🩺 Verificar estado del servicio
+      - name: 📡 Ejecutando webhook de Render
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" "https://backend-jnqc.onrender.com/docs")
-          echo "HTTP Status: $response"
-          if [ "$response" -ne 200 ]; then
+          echo "Llamando a Render..."
+          curl -X POST "${{ secrets.RENDER_HOOK }}"
+          echo "Webhook enviado."
+
+      - name: 📚 Obtener OpenAPI y mostrar endpoints
+        id: swagger
+        run: |
+          echo "Descargando spec OpenAPI..."
+          JSON=$(curl -fs https://backend-jnqc.onrender.com/docs-json)
+
+          if [ -z "$JSON" ]; then
+            echo "❌ No se pudo obtener el JSON."
+            echo "json_error=true" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-      - name: 📢 Notificar en Discord
-        if: always()
+          ENDPOINTS=$(echo "$JSON" | jq -r '.paths | keys[]')
+          COUNT=$(echo "$JSON" | jq '.paths | length')
+
+          echo "-------------------------------"
+          echo "📌 Total de endpoints: $COUNT"
+          echo "-------------------------------"
+          echo "$ENDPOINTS"
+          echo "-------------------------------"
+
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          echo "list=$ENDPOINTS" >> $GITHUB_OUTPUT
+
+      - name: 🔔 Enviar resultado a Discord
         run: |
-          STATUS="${{ job.status }}"
-          
+          echo "Enviando mensaje a Discord..."
+
+          COUNT="${{ steps.swagger.outputs.count }}"
+          ENDPOINTS="${{ steps.swagger.outputs.list }}"
+
+          PAYLOAD=$(jq -n \
+            --arg c "$COUNT" \
+            --arg e "$ENDPOINTS" \
+            '{
+              username: "GitHub CI",
+              content: "📢 **Deploy completado**\n\n**Total de endpoints:** \($c)\n\n```\n\($e)\n```"
+            }'
+          )
+
           curl -H "Content-Type: application/json" \
-          -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
-          -d "{
-            \"username\": \"CI Bot\",
-            \"embeds\": [{
-              \"title\": \"🚀 Deploy ejecutado\",
-              \"description\": \"Resultado del deploy: **$STATUS**\",
-              \"color\": $([ \"$STATUS\" = \"success\" ] && echo 3066993 || echo 15158332),
-              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-            }]
-          }"
+            -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -d "$PAYLOAD"
+
+          echo "Notificación enviada a Discord ✔️"
