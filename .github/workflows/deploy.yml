@@ -24,7 +24,7 @@ jobs:
 
       - name: 🩺 Verificar estado del servicio
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" "https://tu-app.onrender.com/docs")
+          response=$(curl -s -o /dev/null -w "%{http_code}" "https://backend-jnqc.onrender.com/docs")
           echo "HTTP Status: $response"
           if [ "$response" -ne 200 ]; then
             exit 1
