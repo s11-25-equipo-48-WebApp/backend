@@ -20,29 +20,44 @@ jobs:
       - name: 📡 Llamando al Webhook de Render
         run: |
           echo "Ejecutando hook..."
-          # Se usa el comando 'true' || para asegurar que el workflow no falle
-          # si curl no recibe un status 200 (aunque el deploy se inicie).
+          # Llama al webhook secreto de Render para iniciar el despliegue
           curl -X POST "${{ secrets.RENDER_HOOK }}"
-          echo "Hook enviado correctamente ✔️"
+          echo "Hook enviado correctamente, iniciando despliegue en Render ✔️"
 
-      - name: ⏳ Esperando a que Render procese el deploy
+      - name: 🩺 Sondeando la disponibilidad de la app (Health Check con Timeout de 10 Minutos)
         run: |
-          echo "Esperando 15 segundos para permitir que Render inicie el build..."
-          sleep 15
+          URL="https://backend-jnqc.onrender.com/health"
+          ATTEMPTS=0
+          # Configurado para 10 minutos (120 intentos * 5 segundos de espera)
+          MAX_ATTEMPTS=120 
+          
+          echo "Iniciando sondeo de disponibilidad en $URL (Máximo 10 minutos)..."
+          
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Intenta obtener el código HTTP. -fs oculta el progreso y fuerza el error en 4xx/5xx.
+            # -w "%{http_code}" imprime solo el código de respuesta.
+            HTTP_CODE=$(curl -fs -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            
+            if [ "$HTTP_CODE" -eq 200 ]; then
+              echo "✅ Health Check exitoso (HTTP $HTTP_CODE) después de $ATTEMPTS intentos."
+              break # La aplicación está lista, salir del bucle.
+            else
+              echo "⏳ Intento $((ATTEMPTS + 1)) de $MAX_ATTEMPTS: App aún no está lista (HTTP $HTTP_CODE). Esperando 5 segundos..."
+              ATTEMPTS=$((ATTEMPTS + 1))
+              sleep 5
+            fi
+          done
 
-      - name: 🩺 Verificando que la app responde (Health Check)
-        run: |
-          echo "Probando disponibilidad..."
-          # La bandera -f hace que curl falle (código de salida > 0) para cualquier error HTTP (4xx o 5xx)
-          curl -f "https://backend-jnqc.onrender.com/health" \
-          && echo "La app está arriba 🎉" \
-          || (echo "❌ Falló el health-check en https://backend-jnqc.onrender.com/health"; exit 1)
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "La app está arriba 🎉 (Despliegue verificado y listo para las pruebas de API)."
+          else
+            echo "❌ Falló el Health Check después de $MAX_ATTEMPTS intentos (10 minutos). El despliegue falló o tardó demasiado en iniciar."
+            exit 1 # Forzar la falla del job
+          fi
 
       - name: 📚 Obtener lista de endpoints desde Swagger (Verificación API)
-        # ESTE PASO FUE CORREGIDO EN INDENTACIÓN
         run: |
           echo "Descargando spec OpenAPI..."
-          # Usamos -fs para fail silently y asegurar que solo el JSON se almacena si es exitoso
           JSON=$(curl -fs https://backend-jnqc.onrender.com/docs-json)
 
           if [ -z "$JSON" ]; then
@@ -52,7 +67,7 @@ jobs:
 
           echo "✔️ Spec obtenido. Extrayendo endpoints..."
 
-          # Extrae las claves (paths) del objeto .paths y cuenta los elementos
+          # Usa jq para extraer las rutas (keys) del objeto 'paths'
           ENDPOINTS=$(echo "$JSON" | jq -r '.paths | keys[]')
           COUNT=$(echo "$JSON" | jq '.paths | length')
 
