@@ -1,4 +1,4 @@
-name: 🚀 Despliegue a Render
+name: 🚀 Deploy Render
 
 on:
   push:
@@ -7,54 +7,42 @@ on:
 
 jobs:
   trigger-deploy:
-    name: 🔧 Despliegue + Verificación
+    name: 🔧 Disparar Deploy + Notificación
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⚙️ Preparando entorno
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
+      - name: ⚙️ Checkout
+        uses: actions/checkout@v4
 
-      - name: 📡 Ejecutando Webhook de Render
+      - name: 📡 Llamar a Render Deploy Hook
         run: |
-          curl -X POST "${{ secrets.RENDER_HOOK }}"
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+          --fail
 
-      - name: ⏳ Esperar a que la API se levante (retry)
+      - name: ⏱️ Esperar 15 segundos
+        run: sleep 15
+
+      - name: 🩺 Verificar estado del servicio
         run: |
-          for i in {1..10}; do
-            echo "Intento $i/10 verificando API..."
-            if curl -fs https://backend-jnqc.onrender.com/docs-json > /dev/null; then
-              echo "API disponible ✔️"
-              exit 0
-            fi
-            echo "No disponible aún... esperando 5s"
-            sleep 5
-          done
-          echo "❌ API no respondió."
-          exit 1
-
-      - name: 📚 Obtener lista de endpoints desde Swagger
-        run: |
-          echo "Descargando spec OpenAPI..."
-          JSON=$(curl -fs https://backend-jnqc.onrender.com/docs-json)
-
-          if [ -z "$JSON" ]; then
-            echo "❌ Falló la descarga del spec OpenAPI."
+          response=$(curl -s -o /dev/null -w "%{http_code}" "https://tu-app.onrender.com/docs")
+          echo "HTTP Status: $response"
+          if [ "$response" -ne 200 ]; then
             exit 1
           fi
 
-          ENDPOINTS=$(echo "$JSON" | jq -r '.paths | keys[]')
-          COUNT=$(echo "$JSON" | jq '.paths | length')
-
-          echo "-------------------------------"
-          echo "📌 Total de endpoints: $COUNT"
-          echo "-------------------------------"
-          echo "$ENDPOINTS"
-          echo "-------------------------------"
-
-          if [ "$COUNT" -eq 0 ]; then
-            echo "❌ No se encontraron endpoints."
-            exit 1
-          fi
-
-          echo "Verificación final exitosa. 👍"
+      - name: 📢 Notificar en Discord
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          
+          curl -H "Content-Type: application/json" \
+          -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+          -d "{
+            \"username\": \"CI Bot\",
+            \"embeds\": [{
+              \"title\": \"🚀 Deploy ejecutado\",
+              \"description\": \"Resultado del deploy: **$STATUS**\",
+              \"color\": $([ \"$STATUS\" = \"success\" ] && echo 3066993 || echo 15158332),
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+            }]
+          }"
