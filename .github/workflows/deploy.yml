@@ -24,37 +24,6 @@ jobs:
           curl -X POST "${{ secrets.RENDER_HOOK }}"
           echo "Hook enviado correctamente, iniciando despliegue en Render ✔️"
 
-      - name: 🩺 Sondeando la disponibilidad de la app (Health Check con Timeout de 10 Minutos)
-        run: |
-          URL="https://backend-jnqc.onrender.com/health"
-          ATTEMPTS=0
-          # Configurado para 10 minutos (120 intentos * 5 segundos de espera)
-          MAX_ATTEMPTS=120 
-          
-          echo "Iniciando sondeo de disponibilidad en $URL (Máximo 10 minutos)..."
-          
-          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            # Intenta obtener el código HTTP. -fs oculta el progreso y fuerza el error en 4xx/5xx.
-            # -w "%{http_code}" imprime solo el código de respuesta.
-            HTTP_CODE=$(curl -fs -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-            
-            if [ "$HTTP_CODE" -eq 200 ]; then
-              echo "✅ Health Check exitoso (HTTP $HTTP_CODE) después de $ATTEMPTS intentos."
-              break # La aplicación está lista, salir del bucle.
-            else
-              echo "⏳ Intento $((ATTEMPTS + 1)) de $MAX_ATTEMPTS: App aún no está lista (HTTP $HTTP_CODE). Esperando 5 segundos..."
-              ATTEMPTS=$((ATTEMPTS + 1))
-              sleep 5
-            fi
-          done
-
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "La app está arriba 🎉 (Despliegue verificado y listo para las pruebas de API)."
-          else
-            echo "❌ Falló el Health Check después de $MAX_ATTEMPTS intentos (10 minutos). El despliegue falló o tardó demasiado en iniciar."
-            exit 1 # Forzar la falla del job
-          fi
-
       - name: 📚 Obtener lista de endpoints desde Swagger (Verificación API)
         run: |
           echo "Descargando spec OpenAPI..."
