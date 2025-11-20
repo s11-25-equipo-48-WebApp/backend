@@ -10,6 +10,7 @@ import { LoginUserDto } from "./dto/login.user.dto";
 import ConfigEnvs from "../config/envs";
 import { Role } from "../common/entities/enums";
 import { Logger } from "@nestjs/common";
+import { profile } from "console";
 
 @Injectable()
 export class AuthService {
@@ -101,6 +102,10 @@ export class AuthService {
 
     return {
       id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
       accessToken,
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
