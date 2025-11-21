@@ -2,28 +2,52 @@ import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
-import ConfigEnvs from './envs';
-//import ConfigEnvs from './Envs';
 
 @Injectable()
 export class TypeOrmConfigService implements TypeOrmOptionsFactory {
-  constructor(private configService: ConfigService) {}
+  constructor(private readonly config: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
-    const nodeEnv = ConfigEnvs.NODE_ENV;
-    const isProduction = nodeEnv === 'production';
-    const dbUrl = ConfigEnvs.DATABASE_URL;
+    return this.buildOptions();
+  }
 
-    return {
+  createDataSourceOptions?(): TypeOrmModuleOptions {
+    return this.buildOptions();
+  }
+
+  private buildOptions(): TypeOrmModuleOptions {
+    const isProd = this.config.get<string>('NODE_ENV') === 'production';
+    const dbUrl = this.config.get<string>('DATABASE_URL');
+    console.log('⚠️ DATABASE_URL:', dbUrl);
+    if (!dbUrl) {
+      console.error('❌ ERROR: DATABASE_URL no definida');
+      throw new Error('DATABASE_URL no definida');
+    }
+
+    const options: TypeOrmModuleOptions = {
       type: 'postgres',
       url: dbUrl,
-      synchronize: true,
-      entities: [join(__dirname, '../**/*.entity.{ts,js}')],
-      migrations: [join(__dirname, '/../migrations/*.{ts,js}')],
-      logging: !isProduction,
-      ssl: isProduction ? { rejectUnauthorized: false } : false,
-      logger:'debug',
+      synchronize: true,              
+      autoLoadEntities: true,
+      logging: !isProd,               
+      ssl: isProd ? { rejectUnauthorized: false } : false,
       migrationsRun: true,
+      migrations: [
+        __dirname.includes('dist')
+          ? join(__dirname, '../migrations/*.js')
+          : join(process.cwd(), 'src/migrations/*.ts'),
+      ],
+      entities: [
+        __dirname.includes('dist')
+          ? join(__dirname, '../**/*.entity.js')
+          : join(process.cwd(), 'src/**/*.entity.ts'),
+      ]
     };
+
+    if (!isProd) {
+      console.log('📦 TypeORM config:', options);
+    }
+
+    return options;
   }
 }

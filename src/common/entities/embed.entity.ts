@@ -1,14 +1,14 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Testimonial } from "./testimonial.entity";
+
 
 @Entity('embeds')
 export class Embed {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Testimonial, (t) => t.embeds)
+  /*@ManyToOne(() => Testimonial, (t) => t.embeds)
   @JoinColumn({ name: 'testimonial_id' })
-  testimonial!: Testimonial;
+  testimonial!: Testimonial;*/
 
   @Column('uuid')
   testimonial_id!: string;

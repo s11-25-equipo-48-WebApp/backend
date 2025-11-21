@@ -3,28 +3,26 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import ConfigEnvs from './config/envs';
 import { AppModule } from './app.module';
-import cookieParser from 'cookie-parser'; // Corregir la importación de cookie-parser
+import cookieParser from 'cookie-parser';
+import { useContainer } from 'class-validator';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(cookieParser()); // Usar el middleware cookie-parser
+
+  const configService = app.get(ConfigService);
+
+  app.use(cookieParser());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true, // requiere class-transformer
+      transform: true,
     }),
   );
 
   app.setGlobalPrefix('api/v1');
-
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
 
   app.enableCors({
     origin: '*',
@@ -32,28 +30,30 @@ async function bootstrap() {
     credentials: true,
   });
 
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
   const opts = new DocumentBuilder()
-  .setTitle('CMS API')
-  .setDescription('Documentación API para el CMS')
-  .setVersion('1.0')
-  .addTag('cms')
-  .addBearerAuth(
-    {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-    },
-    'access-token',
-  )
-  .build();
+    .setTitle('CMS API')
+    .setDescription('Documentación API para el CMS')
+    .setVersion('1.0')
+    .addTag('cms')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
+    .build();
 
   const doc = SwaggerModule.createDocument(app, opts);
   SwaggerModule.setup('docs', app, doc);
 
+  const port = configService.get<number>('PORT') || 3002;
 
-  const port = ConfigEnvs.PORT;
   await app.listen(port);
-
+  console.log(`🚀 Server running on port ${port}`);
 }
 
 bootstrap();

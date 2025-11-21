@@ -1,9 +1,10 @@
 import { Column, CreateDateColumn, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Role } from "./enums";
 import { UserProfile } from "./userProfile.entity";
-import { Testimonial } from "./testimonial.entity";
+
 import { AuthToken } from "./authToken.entity";
 import { Project } from "./projects.entity";
+import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity";
 
 @Entity('users')
 export class User {
@@ -37,8 +38,8 @@ export class User {
   @OneToOne(() => UserProfile, (p) => p.user)
   profile!: UserProfile;
 
-  @OneToMany(() => Testimonial, (t) => t.author)
-  testimonials!: Testimonial[];
+  @OneToMany(() => Testimonio, (t) => t.author)
+  testimonials!: Testimonio[];
 
   @OneToMany(() => AuthToken, (t) => t.user)
   tokens!: AuthToken[];

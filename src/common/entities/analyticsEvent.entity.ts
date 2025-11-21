@@ -1,5 +1,4 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Testimonial } from "./testimonial.entity";
 import { EventType } from "./enums";
 
 @Entity('analytics_events')
@@ -7,9 +6,9 @@ export class AnalyticsEvent {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Testimonial, (t) => t.analytics)
+  /*@ManyToOne(() => Testimonial, (t) => t.analytics)
   @JoinColumn({ name: 'testimonial_id' })
-  testimonial!: Testimonial;
+  testimonial!: Testimonial;*/
 
   @Column('uuid')
   testimonial_id!: string;

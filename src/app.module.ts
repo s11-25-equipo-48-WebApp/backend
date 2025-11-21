@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { AuthModule } from "./auth/auth.module";
+import { AuthModule } from "./modules/auth/auth.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { APP_FILTER } from "@nestjs/core";
@@ -9,6 +9,9 @@ import { AllExceptionsFilter } from "./common/filters/http-exception.filter";
 import { LoggerModule } from "./infra/Logger/logger.module";
 import { TypeOrmConfigService } from "./config/typeorm.config";
 import { TestingModule } from "./testing/testing.module";
+import { TestimoniosModule } from './modules/testimonios/testimonios.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { TagsModule } from './modules/tags/tags.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { TestingModule } from "./testing/testing.module";
     LoggerModule,
     AuthModule,
     TestingModule,
+    TestimoniosModule,
+    CategoriesModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -30,7 +36,7 @@ import { TestingModule } from "./testing/testing.module";
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
-    TypeOrmConfigService,
   ],
 })
 export class AppModule {}
+

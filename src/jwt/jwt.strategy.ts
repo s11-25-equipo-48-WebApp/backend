@@ -1,43 +1,41 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'; // Eliminar Logger
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ExtractJwt, Strategy, StrategyOptionsWithRequest } from 'passport-jwt';
 import { Role } from '../common/entities/enums';
-import ConfigEnvs from '../config/envs';
 import { Request } from 'express';
-
-
-const jwtSecret = ConfigEnvs.JWT_SECRET;
-if (!jwtSecret) {
-  console.log('ERROR: JWT_SECRET must be defined in .env'); // Usar console.log
-  throw new Error('JWT_SECRET must be defined in .env');
-}
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  // private readonly logger = new Logger(JwtStrategy.name); // Eliminar Logger
-
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: jwtSecret as string,
-      passReqToCallback: true, // Permite acceder al objeto request en validate
-    });
-    console.log('[JwtStrategy] JwtStrategy inicializada'); // console.log de inicialización
+      secretOrKey: configService.get<string>('JWT_SECRET'),
+      passReqToCallback: true,
+    } as StrategyOptionsWithRequest);
+
+    console.log('[JwtStrategy] Strategy inicializada');
   }
 
   async validate(req: Request, payload: any) {
-    console.log(`[JwtStrategy] Validando access token para payload: ${JSON.stringify(payload)}`); // Usar console.log
-    
+    console.log(`[JwtStrategy] Validando token con payload: ${JSON.stringify(payload)}`);
+
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-    console.log(`[JwtStrategy] Access token recibido: ${token ? token.substring(0, 10) + '...' : 'No token'}`); // Usar console.log
+
+    console.log(
+      `[JwtStrategy] Access token recibido: ${
+        token ? token.substring(0, 10) + '...' : 'No token'
+      }`,
+    );
 
     if (!payload) {
-      console.log('[JwtStrategy] Payload vacío después de la validación del token.'); // Usar console.log
-      throw new UnauthorizedException('Token de acceso inválido');
+      console.log('[JwtStrategy] Payload vacío.');
+      throw new UnauthorizedException('Token inválido');
     }
-    
-    console.log(`[JwtStrategy] Access token validado exitosamente para el usuario: ${payload.sub}`); // Usar console.log
+
+    console.log(`[JwtStrategy] Token válido para usuario ${payload.sub}`);
+
     return {
       id: payload.sub,
       email: payload.email,

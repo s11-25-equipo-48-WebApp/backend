@@ -1,6 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./user.entity";
-import { Testimonial } from "./testimonial.entity";
 
 @Entity('projects')
 export class Project {
@@ -20,6 +19,6 @@ export class Project {
   @Column('uuid')
   user_id!: string;
 
-  @OneToMany(() => Testimonial, (testimonial) => testimonial.project)
-  testimonials!: Testimonial[];
+  /*@OneToMany(() => Testimonial, (testimonial) => testimonial.project)
+  testimonials!: Testimonial[];*/
 }

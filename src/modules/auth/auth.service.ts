@@ -1,29 +1,31 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { LessThan, Repository } from "typeorm";
-import { User } from "../common/entities/user.entity";
-import { AuthToken } from "../common/entities/authToken.entity";
+import { User } from "../../common/entities/user.entity";
+import { AuthToken } from "../../common/entities/authToken.entity";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { RegisterUserDto } from "./dto/register-user.dto";
 import { LoginUserDto } from "./dto/login.user.dto";
-import ConfigEnvs from "../config/envs";
-import { Role } from "../common/entities/enums";
-import { Logger } from "@nestjs/common";
-import { profile } from "console";
+import { Role } from "../../common/entities/enums";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthService {
+  private readonly logger: Logger;
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+
     @InjectRepository(AuthToken)
     private readonly authTokenRepository: Repository<AuthToken>,
+
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {
     this.logger = new Logger(AuthService.name);
   }
-  private readonly logger: Logger;
 
   // ====================
   // Registro de usuario
@@ -46,8 +48,9 @@ export class AuthService {
     await this.usersRepository.save(newUser);
 
     const payload = { sub: newUser.id, email: newUser.email, role: newUser.role };
+
     const accessToken = this.jwtService.sign(payload, {
-      secret: ConfigEnvs.JWT_SECRET,
+      secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
     });
 
@@ -71,8 +74,7 @@ export class AuthService {
     const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
 
-    // LIMPIAR refresh tokens expirados ANTES DE GENERAR NUEVOS
-
+    // Revocar tokens anteriores
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
       { revoked: true },
@@ -83,16 +85,19 @@ export class AuthService {
     });
 
     const payload = { sub: user.id, email: user.email, role: user.role };
+
     const accessToken = this.jwtService.sign(payload, {
-      secret: ConfigEnvs.JWT_SECRET,
+      secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
     });
+
     const refreshToken = this.jwtService.sign(payload, {
-      secret: ConfigEnvs.JWT_REFRESH_SECRET,
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
     });
 
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
     const tokenEntity = this.authTokenRepository.create({
       refresh_token_hash: refreshTokenHash,
       user: user,
@@ -118,23 +123,27 @@ export class AuthService {
   // ====================
   async refresh(user: any) {
     this.logger.debug(`Iniciando refresh para el usuario: ${user.id}`);
-    const tokenInDb = user.authToken;
 
+    const tokenInDb = user.authToken;
     if (!tokenInDb) {
-      this.logger.error(`authToken no encontrado en el objeto de usuario para: ${user.id}. Esto no debería ocurrir si la estrategia funciona correctamente.`);
       throw new UnauthorizedException('Token de refresco no validado por la estrategia.');
     }
 
     tokenInDb.revoked = true;
     await this.authTokenRepository.save(tokenInDb);
-    this.logger.debug(`Token de refresco antiguo revocado para el usuario: ${user.id}`);
 
     const payload = { sub: user.id, email: user.email, role: user.role };
-    const newAccessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+
+    const newAccessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET'),
+      expiresIn: '15m',
+    });
+
     const newRefreshToken = this.jwtService.sign(payload, {
-      secret: ConfigEnvs.JWT_REFRESH_SECRET,
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
     });
+
     const newHash = await bcrypt.hash(newRefreshToken, 10);
 
     const newTokenEntity = this.authTokenRepository.create({
@@ -142,8 +151,8 @@ export class AuthService {
       user: user,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
+
     await this.authTokenRepository.save(newTokenEntity);
-    this.logger.debug(`Nuevo token de refresco generado y guardado para el usuario: ${user.id}`);
 
     return {
       id: user.id,
@@ -159,6 +168,7 @@ export class AuthService {
   // ====================
   async logout(user: any) {
     await this.authTokenRepository.update({ user: { id: user.id } }, { revoked: true });
+
     return {
       id: user.id,
       estado: user.is_active ? 'activo' : 'pendiente',
