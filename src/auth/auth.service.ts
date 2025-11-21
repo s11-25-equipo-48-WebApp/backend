@@ -40,7 +40,7 @@ export class AuthService {
       email,
       password_hash: hashedPassword,
       is_active: true,
-      role: Role.VISITOR,
+      role: Role.ADMIN,
       name: email.split('@')[0],
     });
     await this.usersRepository.save(newUser);
