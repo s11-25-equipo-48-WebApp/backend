@@ -28,7 +28,7 @@ import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 @ApiTags('Testimonios')
 @Controller('api/v1/testimonios')
 export class TestimoniosController {
-  constructor(private readonly testimoniosService: TestimoniosService) {}
+  constructor(private readonly testimoniosService: TestimoniosService) { }
 
   @Post()
   @HttpCode(201)
@@ -58,8 +58,9 @@ export class TestimoniosController {
   async create(
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
     createTestimonioDto: CreateTestimonioDto,
+    @Req() req: RequestWithUser,
   ) {
-    const created = await this.testimoniosService.create(createTestimonioDto);
+    const created = await this.testimoniosService.create(createTestimonioDto, req.user);
 
     return {
       id: created.id,
@@ -75,72 +76,72 @@ export class TestimoniosController {
     };
   }
 
-    @Patch(':id')
-    @HttpCode(200)
-    @ApiOperation({
-        summary: 'Editar testimonio',
-        description:
-        'Editar campos permitidos del testimonio. Solo el autor o admin puede editar. Se registra un audit_log con diff antes/después.',
-    })
-    @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
-    @ApiBody({ type: UpdateTestimonioDto })
-    @ApiOkResponse({
-        description: 'Testimonio actualizado',
-        schema: {
-        example: {
-            id: 'uuid-v4',
-            title: 'Título actualizado',
-            body: 'Contenido corregido',
-            category_id: 'uuid-category',
-            tags: ['uuid-tag-1', 'uuid-tag-2'],
-            media_url: 'https://res.cloudinary.com/mi-cuenta/.../nueva.jpg',
-            media_type: 'image',
-            author: 'Juan Pérez',
-            author_id: 'uuid-user',
-            status: 'pending',
-            created_at: '2025-11-21T10:00:00.000Z',
-            updated_at: '2025-11-22T12:00:00.000Z',
-        },
-        },
-    })
-    async update(
-        @Param('id') id: string,
-        @Body() dto: UpdateTestimonioDto,
-        @Req() req: RequestWithUser, 
-    ) {
-        const user = req.user || null;
-        const updated = await this.testimoniosService.update(id, dto, user);
-        return updated;
-    }
+  @Patch(':id')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Editar testimonio',
+    description:
+      'Editar campos permitidos del testimonio. Solo el autor o admin puede editar. Se registra un audit_log con diff antes/después.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
+  @ApiBody({ type: UpdateTestimonioDto })
+  @ApiOkResponse({
+    description: 'Testimonio actualizado',
+    schema: {
+      example: {
+        id: 'uuid-v4',
+        title: 'Título actualizado',
+        body: 'Contenido corregido',
+        category_id: 'uuid-category',
+        tags: ['uuid-tag-1', 'uuid-tag-2'],
+        media_url: 'https://res.cloudinary.com/mi-cuenta/.../nueva.jpg',
+        media_type: 'image',
+        author: 'Juan Pérez',
+        author_id: 'uuid-user',
+        status: 'pending',
+        created_at: '2025-11-21T10:00:00.000Z',
+        updated_at: '2025-11-22T12:00:00.000Z',
+      },
+    },
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateTestimonioDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user || null;
+    const updated = await this.testimoniosService.update(id, dto, user);
+    return updated;
+  }
 
-    @Patch(':id/status')
-    @HttpCode(200)
-    @ApiOperation({
-        summary: 'Cambiar estado de un testimonio',
-        description:
-        'Solo admins pueden cambiar estado. Registra approved_by y approved_at. Reglas de transición aplican.',
-    })
-    @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
-    @ApiBody({ type: UpdateStatusDto })
-    @ApiOkResponse({ description: 'Estado actualizado', schema: { example: { id: 'uuid-v4', status: 'aprobado' } } })
-    async updateStatus(
-        @Param('id') id: string,
-        @Body() dto: UpdateStatusDto,
-        @Req() req: RequestWithUser, 
-    ) {
-        const user = req.user;
-        const updated = await this.testimoniosService.updateStatus(id, dto, user);
-        return {
-        id: updated.id,
-        status: updated.status,
-        approved_by: updated.approved_by ?? null,
-        approved_at: updated.approved_at ?? null,
-        };
-    }
+  @Patch(':id/status')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Cambiar estado de un testimonio',
+    description:
+      'Solo admins pueden cambiar estado. Registra approved_by y approved_at. Reglas de transición aplican.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
+  @ApiBody({ type: UpdateStatusDto })
+  @ApiOkResponse({ description: 'Estado actualizado', schema: { example: { id: 'uuid-v4', status: 'aprobado' } } })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateStatusDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    const updated = await this.testimoniosService.updateStatus(id, dto, user);
+    return {
+      id: updated.id,
+      status: updated.status,
+      approved_by: updated.approved_by ?? null,
+      approved_at: updated.approved_at ?? null,
+    };
+  }
 
 
-    @Get()
-    async findPublic(@Query() query: GetTestimoniosQueryDto) {
+  @Get()
+  async findPublic(@Query() query: GetTestimoniosQueryDto) {
     return this.testimoniosService.findPublic(query);
-    }
+  }
 }

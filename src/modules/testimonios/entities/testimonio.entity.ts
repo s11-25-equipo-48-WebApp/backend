@@ -16,7 +16,7 @@ import {
 
 @Entity('testimonios')
 export class Testimonio {
-  @PrimaryColumn('int')
+  @PrimaryColumn('uuid')
   id: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -45,14 +45,14 @@ export class Testimonio {
   @Column({ type: 'varchar', length: 255, nullable: true })
   author?: string | null;
 
-@Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   author_id?: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-    approved_by?: string | null;
+  approved_by?: string | null;
 
-    @Column({ type: 'timestamptz', nullable: true })
-    approved_at?: Date | null;
+  @Column({ type: 'timestamptz', nullable: true })
+  approved_at?: Date | null;
 
   @Column({ type: 'varchar', length: 50, default: Status.PENDIENTE })
   status: Status.PENDIENTE | Status.APROBADO | Status.RECHAZADO;
