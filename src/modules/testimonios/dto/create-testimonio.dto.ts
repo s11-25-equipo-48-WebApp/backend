@@ -78,4 +78,12 @@ export class CreateTestimonioDto {
   @IsOptional()
   @IsString()
   author?: string;
+
+  @ApiProperty({
+    description: 'Correo del cliente',
+    example: 'maria.gomez@example.com',
+  })
+  @IsString()
+  @IsNotEmpty()
+  email: string;
 }
