@@ -1,5 +1,5 @@
-import { Role } from "../entities/enums";
 import { Request } from 'express';
+import { Role } from 'src/modules/auth/entities/enums';
 
 export interface RequestWithUser extends Request {
     user: {

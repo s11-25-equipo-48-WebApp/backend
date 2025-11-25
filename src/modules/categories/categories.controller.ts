@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   Param,
   Patch,
@@ -20,11 +21,19 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Category } from './entities/category.entity';
 
 @ApiTags('Categories')
-@Controller('api/v1/categories')
+@Controller('categories')
 export class CategoriesController {
   constructor(private readonly service: CategoriesService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Listar categorías' })
+  @ApiOkResponse({ type: [Category] })
+  async findAll() {
+    return await this.service.findAll();
+  }
 
   @Post()
   @HttpCode(201)

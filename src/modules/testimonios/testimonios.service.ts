@@ -8,11 +8,11 @@ import { UpdateTestimonioDto } from './dto/update-testimonio.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuditLog } from './entities/audit-log.entity';
 import { RequestWithUser } from 'src/common/interfaces/RequestWithUser';
-import { Status } from 'src/common/entities/enums';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
+import { Status } from '../auth/entities/enums';
 
 @Injectable()
 export class TestimoniosService {
