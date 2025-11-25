@@ -58,9 +58,8 @@ export class TestimoniosController {
   async create(
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
     createTestimonioDto: CreateTestimonioDto,
-    @Req() req: RequestWithUser,
   ) {
-    const created = await this.testimoniosService.create(createTestimonioDto, req.user);
+    const created = await this.testimoniosService.create(createTestimonioDto);
 
     return {
       id: created.id,
