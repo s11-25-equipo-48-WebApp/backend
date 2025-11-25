@@ -1,6 +1,7 @@
 import { last } from 'rxjs';
 import { Status } from 'src/modules/auth/entities/enums';
 import { Category } from 'src/modules/categories/entities/category.entity';
+import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
 import {
   Entity,
@@ -11,6 +12,7 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity('testimonios')
@@ -64,4 +66,11 @@ export class Testimonio {
 
   @Column({ type: 'timestamptz', nullable: true })
   deleted_at?: Date | null;
+
+  @ManyToOne(() => Organization, (org) => org.testimonios, {
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 }

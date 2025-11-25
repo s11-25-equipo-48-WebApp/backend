@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -12,6 +12,7 @@ import { TestingModule } from "./testing/testing.module";
 import { TestimoniosModule } from './modules/testimonios/testimonios.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { TagsModule } from './modules/tags/tags.module';
+import { OrganizationModule } from "./modules/organization/organization.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TagsModule } from './modules/tags/tags.module';
     TestimoniosModule,
     CategoriesModule,
     TagsModule,
+    forwardRef(() => OrganizationModule),
   ],
   controllers: [AppController],
   providers: [

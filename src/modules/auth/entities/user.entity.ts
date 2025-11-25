@@ -1,8 +1,10 @@
-import { Column, CreateDateColumn, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Role } from "./enums";
 import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity";
 import { UserProfile } from "./userProfile.entity";
 import { AuthToken } from "./authToken.entity";
+import { Organization } from "src/modules/organization/entities/organization.entity";
+import { OrganizationUser } from "src/modules/organization/entities/organization_user.entity";
 
 @Entity('users')
 export class User {
@@ -42,6 +44,6 @@ export class User {
   @OneToMany(() => AuthToken, (t) => t.user)
   tokens!: AuthToken[];
 
-//   @OneToMany(() => Project, (project) => project.user)
-//   projects!: Project[];
+  @OneToMany(() => OrganizationUser, (ou) => ou.user)
+  organizations: OrganizationUser[];
 }

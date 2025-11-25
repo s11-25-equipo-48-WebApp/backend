@@ -9,11 +9,15 @@ import { AuthController } from "./auth.controller";
 import { JwtRefreshStrategy } from "src/jwt/JwtRefreshStrategy";
 import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
+import { Organization } from "../organization/entities/organization.entity";
+import { OrganizationUser } from "../organization/entities/organization_user.entity";
+import { OrganizationModule } from "../organization/organization.module";
 
 
 @Module({
   imports: [
     PassportModule,
+    OrganizationModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -24,7 +28,7 @@ import { AuthToken } from "./entities/authToken.entity";
         },
       }),
     }),
-    TypeOrmModule.forFeature([User, AuthToken]),
+    TypeOrmModule.forFeature([User, AuthToken, Organization, OrganizationUser]),
   ],
   providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
   controllers: [AuthController],

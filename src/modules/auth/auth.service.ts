@@ -9,6 +9,8 @@ import { ConfigService } from "@nestjs/config";
 import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
 import { Role } from "./entities/enums";
+import { Organization } from "../organization/entities/organization.entity";
+import { OrganizationUser } from "../organization/entities/organization_user.entity";
 
 @Injectable()
 export class AuthService {
@@ -17,12 +19,14 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-
     @InjectRepository(AuthToken)
     private readonly authTokenRepository: Repository<AuthToken>,
-
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(Organization)
+    private readonly organizationRepository: Repository<Organization>,
+    @InjectRepository(OrganizationUser)
+    private readonly organizationUserRepository: Repository<OrganizationUser>,
   ) {
     this.logger = new Logger(AuthService.name);
   }
@@ -47,7 +51,23 @@ export class AuthService {
     });
     await this.usersRepository.save(newUser);
 
-    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role };
+    // 2. Crear organización automáticamente
+    const newOrg = this.organizationRepository.create({
+      name: `${newUser.name}-organization`
+    });
+    await this.organizationRepository.save(newOrg); // Guardar la organización antes de usarla en la relación
+
+    // 3. Insertar relación en organization_users
+    const newOrgUserRelation = this.organizationUserRepository.create({
+      user: newUser,
+      organization: newOrg,
+      role: newUser.role, // O el rol por defecto para un nuevo usuario en la organización
+    });
+    await this.organizationUserRepository.save(newOrgUserRelation);
+
+    const organizationId = newOrgUserRelation?.organization?.id || null;
+
+    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role, organizationId };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -74,6 +94,13 @@ export class AuthService {
     const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
 
+    const loginOrgUserRelation = await this.organizationUserRepository.findOne({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
+
+    const organizationId = loginOrgUserRelation?.organization?.id || null;
+
     // Revocar tokens anteriores
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
@@ -84,7 +111,7 @@ export class AuthService {
       expires_at: LessThan(new Date()),
     });
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, organizationId };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -132,7 +159,14 @@ export class AuthService {
     tokenInDb.revoked = true;
     await this.authTokenRepository.save(tokenInDb);
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // Obtener el organizationId del usuario actual
+    const refreshOrgUserRelation = await this.organizationUserRepository.findOne({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
+    const organizationId = refreshOrgUserRelation?.organization?.id || null;
+
+    const payload = { sub: user.id, email: user.email, role: user.role, organizationId };
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
