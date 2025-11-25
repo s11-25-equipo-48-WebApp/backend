@@ -20,7 +20,7 @@ import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 
 @ApiTags('Tags')
-@Controller('api/v1/tags')
+@Controller('tags')
 export class TagsController {
   constructor(private readonly service: TagsService) {}
 
