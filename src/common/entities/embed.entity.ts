@@ -1,33 +1,33 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+// import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 
-@Entity('embeds')
-export class Embed {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+// @Entity('embeds')
+// export class Embed {
+//   @PrimaryGeneratedColumn('uuid')
+//   id!: string;
 
-  /*@ManyToOne(() => Testimonial, (t) => t.embeds)
-  @JoinColumn({ name: 'testimonial_id' })
-  testimonial!: Testimonial;*/
+//   /*@ManyToOne(() => Testimonial, (t) => t.embeds)
+//   @JoinColumn({ name: 'testimonial_id' })
+//   testimonial!: Testimonial;*/
 
-  @Column('uuid')
-  testimonial_id!: string;
+//   @Column('uuid')
+//   testimonial_id!: string;
 
-  @Column({ type: 'int' })
-  width!: number;
+//   @Column({ type: 'int' })
+//   width!: number;
 
-  @Column({ type: 'int' })
-  height!: number;
+//   @Column({ type: 'int' })
+//   height!: number;
 
-  @Column({ type: 'varchar' })
-  theme!: string;
+//   @Column({ type: 'varchar' })
+//   theme!: string;
 
-  @Column({ type: 'boolean', default: false })
-  autoplay!: boolean;
+//   @Column({ type: 'boolean', default: false })
+//   autoplay!: boolean;
 
-  @CreateDateColumn()
-  created_at!: Date;
+//   @CreateDateColumn()
+//   created_at!: Date;
 
-  @UpdateDateColumn()
-  updated_at!: Date;
-}
+//   @UpdateDateColumn()
+//   updated_at!: Date;
+// }

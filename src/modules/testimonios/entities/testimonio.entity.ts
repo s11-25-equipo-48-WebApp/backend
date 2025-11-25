@@ -1,7 +1,6 @@
 import { last } from 'rxjs';
+import { Status } from 'src/modules/auth/entities/enums';
 import { Category } from 'src/modules/categories/entities/category.entity';
-
-import { Status } from 'src/common/entities/enums';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
 import {
   Entity,
@@ -28,7 +27,7 @@ export class Testimonio {
   @ManyToOne(() => Category)
   category: Category;
 
-  @ManyToMany(() => Tag)
+  @ManyToMany(() => Tag, (tag) => tag.testimonios, { eager: false })
   @JoinTable({
     name: 'testimonios_tags', // nombre de la tabla pivot
     joinColumn: { name: 'testimonio_id', referencedColumnName: 'id' },

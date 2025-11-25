@@ -1,10 +1,11 @@
 import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/entities/enums';
+//import { Role } from '../common/entities/enums';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TestingService } from './testing.service';
 import { JwtAuthGuard } from '../jwt/jwt.guard';
+import { Role } from './entities/enums';
 
 @ApiTags('testing')
 @Controller('testing')

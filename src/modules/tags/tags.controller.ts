@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   Param,
   Patch,
@@ -16,13 +17,21 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { TagsService } from './tags.service';
-import { CreateTagDto } from './dto/create-tag.dto';
-import { UpdateTagDto } from './dto/update-tag.dto';
+import { CreateTagDto } from './dto/CreateTagDto';
+import { UpdateTagDto } from './dto/UpdateTagDto';
 
 @ApiTags('Tags')
 @Controller('tags')
 export class TagsController {
   constructor(private readonly service: TagsService) {}
+
+
+  @Get()
+  @ApiOperation({ summary: 'Listar tags' })
+  @ApiOkResponse({ type: [String] })
+  async findAll() {
+    return await this.service.findAll();
+  }
 
   @Post()
   @HttpCode(201)

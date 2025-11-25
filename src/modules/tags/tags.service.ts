@@ -1,55 +1,62 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { TagRepository } from './repositories/tag.repository';
-import { CreateTagDto } from './dto/create-tag.dto';
-import { UpdateTagDto } from './dto/update-tag.dto';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { CreateTagDto } from './dto/CreateTagDto';
+import { UpdateTagDto } from './dto/UpdateTagDto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tag } from './entities/tag.entity';
-import { Testimonio } from '../testimonios/entities/testimonio.entity';
 
 @Injectable()
 export class TagsService {
   constructor(
-    private readonly repo: TagRepository,
-    @InjectRepository(Testimonio)
-    private readonly testimonioRepo: Repository<Testimonio>,
-  ) {}
+    @InjectRepository(Tag)
+    private readonly repo: Repository<Tag>,
+  ){}
 
-  async create(dto: CreateTagDto): Promise<Tag> {
-    const exists = await this.repo.findByName(dto.name);
-    if (exists) throw new BadRequestException(`Tag with name "${dto.name}" already exists`);
+  async create(dto: CreateTagDto) {
+    const exists = await this.repo.findOne({ where: { name: dto.name } });
+    if (exists) throw new BadRequestException('Tag already exists');
 
-    const entity = this.repo.create({ name: dto.name } as Partial<Tag>);
-    return await this.repo.save(entity);
+    const slug = dto.name.toLowerCase().replace(/\s+/g, '-');
+
+    const tag = this.repo.create({
+      name: dto.name,
+      slug,
+      description: dto.description ?? null,
+    });
+
+    return this.repo.save(tag);
   }
 
-  async update(id: string, dto: UpdateTagDto): Promise<Tag> {
-    const entity = await this.repo.findOneById(id);
-    if (!entity) throw new NotFoundException(`Tag with id ${id} not found`);
+  async findAll() {
+    return this.repo.find({ order: { name: 'ASC' } });
+  }
 
-    if (dto.name && dto.name !== entity.name) {
-      const other = await this.repo.findByName(dto.name);
-      if (other && other.id !== id) {
-        throw new BadRequestException(`Tag with name "${dto.name}" already exists`);
-      }
-      entity.name = dto.name;
+  async findOne(id: string) {
+    const tag = await this.repo.findOne({ where: { id } });
+    if (!tag) throw new NotFoundException();
+    return tag;
+  }
+
+  async update(id: string, dto: UpdateTagDto) {
+    const tag = await this.findOne(id);
+
+    if (dto.name) {
+      const exists = await this.repo.findOne({ where: { name: dto.name } });
+      if (exists && exists.id !== id)
+        throw new BadRequestException('Name already in use');
+
+      tag.name = dto.name;
+      tag.slug = dto.name.toLowerCase().replace(/\s+/g, '-');
     }
 
-    return await this.repo.save(entity);
+    if (dto.description !== undefined) tag.description = dto.description;
+
+    return this.repo.save(tag);
   }
 
-  /**
-   * Delete tag:
-   * - remueve las relaciones en la tabla join testimonios_tags (o testimonios_tags)
-   * - elimina el tag
-   */
   async delete(id: string) {
-    const tag = await this.repo.findOneById(id);
-    if (!tag) throw new NotFoundException('Tag not found');
-
-    await this.repo.deleteRelations(id);
-    await this.repo.deleteById(id);
-
+    const tag = await this.findOne(id);
+    await this.repo.remove(tag);
     return { id };
   }
 }
