@@ -14,14 +14,15 @@ import { Testimonio } from '../testimonios/entities/testimonio.entity';
 @Injectable()
 export class CategoriesService {
   constructor(
-    private readonly repo: CategoryRepository,
-    @InjectRepository(Testimonio)
-    private readonly testimonioRepo: Repository<Testimonio>,
-  ) {}
+  @InjectRepository(Category)
+  private readonly repo: Repository<Category>,
+  @InjectRepository(Testimonio)
+  private readonly testimonioRepo: Repository<Testimonio>,
+) {}
 
   async create(dto: CreateCategoryDto): Promise<Category> {
     // unicidad
-    const exists = await this.repo.findByName(dto.name);
+    const exists = await this.repo.findOne({ where: { name: dto.name } });
     if (exists) {
       throw new BadRequestException(`Category with name "${dto.name}" already exists`);
     }
@@ -39,7 +40,7 @@ export class CategoriesService {
     if (!entity) throw new NotFoundException(`Category with id ${id} not found`);
 
     if (dto.name && dto.name !== entity.name) {
-      const other = await this.repo.findByName(dto.name);
+      const other = await this.repo.findOne({ where: { id } });
       if (other && other.id !== id) {
         throw new BadRequestException(`Category with name "${dto.name}" already exists`);
       }
@@ -55,25 +56,37 @@ export class CategoriesService {
    * - Si se pasa reassignTo (id de otra categoría), reasigna testimonios y luego elimina.
    */
   async delete(id: string, reassignTo?: string) {
-    const category = await this.repo.findOneById(id);
+    const category = await this.repo.findOne({ where: { id } });
     if (!category) throw new NotFoundException('Category not found');
 
-    const count = await this.repo.countTestimoniosByCategory(id);
+    // contar testimonios asociados
+    const testimonios = await this.testimonioRepo.count({
+      where: { category: { id } },
+    });
 
-    if (count > 0) {
+    if (testimonios > 0) {
       if (!reassignTo) {
         throw new BadRequestException(
-          `Category has ${count} testimonios. Provide reassignTo.`,
+          `Category has ${testimonios} testimonios. Provide reassignTo.`,
         );
       }
 
-      const dest = await this.repo.findOneById(reassignTo);
+      const dest = await this.repo.findOne({ where: { id: reassignTo } });
       if (!dest) throw new NotFoundException('Destination category not found');
 
-      await this.repo.reassignTestimonios(id, reassignTo);
+      await this.testimonioRepo.update(
+        { category: { id } },
+        { category: dest },
+      );
     }
 
-    await this.repo.deleteById(id);
+    await this.repo.delete(id);
     return { id };
+  }
+
+  async findAll() {
+    return this.repo.find({
+      order: { name: 'ASC' },
+    });
   }
 }
