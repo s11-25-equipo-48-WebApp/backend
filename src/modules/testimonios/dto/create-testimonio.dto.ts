@@ -69,6 +69,7 @@ export class CreateTestimonioDto {
     example: MediaType.IMAGE,
   })
   @IsEnum(MediaType, { message: 'media_type must be one of: image, video, none' })
+  @IsOptional()
   media_type: MediaType;
 
   @ApiPropertyOptional({
