@@ -1,7 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from "typeorm";
 import { Organization } from "./organization.entity";
-import { Role } from "../../auth/entities/enums";
 import { User } from "../../auth/entities/user.entity";
+import { Role } from "./enums";
 
 @Entity('organization_users')
 @Unique(['user', 'organization'])

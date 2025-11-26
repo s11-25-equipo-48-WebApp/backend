@@ -7,12 +7,12 @@ import {
   Param,
   Patch,
   Post,
-  Req, // Importar Req
-  UseGuards, // Importar UseGuards
-  HttpStatus, // Importar HttpStatus
+  Req,
+  UseGuards,
+  HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth, // Importar ApiBearerAuth
+  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -23,67 +23,71 @@ import {
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/CreateTagDto';
 import { UpdateTagDto } from './dto/UpdateTagDto';
-import { JwtAuthGuard } from 'src/jwt/jwt.guard'; // Importar JwtAuthGuard
-import { RolesGuard } from 'src/common/guards/roles.guard'; // Importar RolesGuard
-import { Roles } from 'src/common/decorators/roles.decorator'; // Importar Roles
-import { Role } from 'src/modules/auth/entities/enums'; // Importar Role
-import { RequestWithUser } from 'src/common/interfaces/RequestWithUser'; // Importar RequestWithUser
-import { Tag } from './entities/tag.entity'; // Importar Tag (cambiar a import normal)
+import { JwtAuthGuard } from 'src/jwt/jwt.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Tag } from './entities/tag.entity';
+import { Role } from '../organization/entities/enums';
 
 
 @ApiTags('Tags')
-@Controller('tags')
-@UseGuards(JwtAuthGuard, RolesGuard) // Aplicar Guards a nivel de controlador
-@ApiBearerAuth('access-token') // Decorador para Swagger
+@Controller('organizations/:organizationId/tags')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('access-token')
 export class TagsController {
   constructor(private readonly service: TagsService) {}
 
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR) // Todos pueden listar
+  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Listar tags' })
-  @ApiOkResponse({ type: [Tag] }) // Esto ahora es válido
-  async findAll(@Req() req) {
-    return await this.service.findAll(req.user);
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiOkResponse({ type: [Tag] })
+  async findAll(@Param('organizationId') organizationId: string, @Req() req) {
+    return await this.service.findAll(req.user, organizationId);
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR) // Solo admins y editores pueden crear
-  @HttpCode(HttpStatus.CREATED) // Usar HttpStatus
+  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear tag' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiBody({ type: CreateTagDto })
   @ApiCreatedResponse({ description: 'Tag creado' })
-  async create(@Body() dto: CreateTagDto, @Req() req) {
-    return await this.service.create(dto, req.user);
+  async create(@Param('organizationId') organizationId: string, @Body() dto: CreateTagDto, @Req() req) {
+    return await this.service.create(dto, req.user, organizationId);
   }
 
-  @Get(':id') // Añadir endpoint para obtener un tag por ID
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR) // Todos pueden ver un tag
+  @Get(':id')
+  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Obtener un tag por ID' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiOkResponse({ description: 'Tag encontrado', type: Tag })
-  async findOne(@Param('id') id: string, @Req() req) {
-    return await this.service.findOne(id, req.user);
+  async findOne(@Param('organizationId') organizationId: string, @Param('id') id: string, @Req() req) {
+    return await this.service.findOne(id, req.user, organizationId);
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR) // Solo admins y editores pueden actualizar
-  @HttpCode(HttpStatus.OK) // Usar HttpStatus
+  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar tag' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiBody({ type: UpdateTagDto })
   @ApiOkResponse({ description: 'Tag actualizado' })
-  async update(@Param('id') id: string, @Body() dto: UpdateTagDto, @Req() req) {
-    return await this.service.update(id, dto, req.user);
+  async update(@Param('organizationId') organizationId: string, @Param('id') id: string, @Body() dto: UpdateTagDto, @Req() req) {
+    return await this.service.update(id, dto, req.user, organizationId);
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.SUPERADMIN) // Solo admins pueden eliminar
-  @HttpCode(HttpStatus.OK) // Usar HttpStatus
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar tag (remueve relaciones con testimonios)' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiOkResponse({ description: 'Tag eliminado' })
-  async remove(@Param('id') id: string, @Req() req) {
-    return await this.service.delete(id, req.user);
+  async remove(@Param('organizationId') organizationId: string, @Param('id') id: string, @Req() req) {
+    return await this.service.delete(id, req.user, organizationId);
   }
 }

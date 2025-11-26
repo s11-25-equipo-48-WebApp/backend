@@ -4,13 +4,14 @@ import { OrganizationService } from "./organization.service";
 import { JwtAuthGuard } from "src/jwt/jwt.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorators/roles.decorator";
-import { Role } from "../auth/entities/enums";
+//import { Role } from "../auth/entities/enums";
 import { AddOrganizationMemberDto, UpdateOrganizationDto, UpdateOrganizationMemberRoleDto, CreateOrganizationDto } from "./dto/organization.dto";
 import { CreateOrganizationMemberDto } from "./dto/create-organization-member.dto"; // Importar el nuevo DTO
 import { OrganizationMemberDto } from "./dto/organization-member.dto"; // Importar OrganizationMemberDto
 import { AuthService } from "src/modules/auth/auth.service";
 import type { Response } from 'express';
 import { ConfigService } from "@nestjs/config";
+import { Role } from "./entities/enums";
 
 
 @ApiTags('Organization')

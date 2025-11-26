@@ -1,6 +1,6 @@
 import { last } from 'rxjs';
-import { Status } from 'src/modules/auth/entities/enums';
 import { Category } from 'src/modules/categories/entities/category.entity';
+import { Status } from 'src/modules/organization/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
 import {

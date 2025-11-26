@@ -1,4 +1,4 @@
-import { Role } from 'src/modules/auth/entities/enums';
+import { Role } from "../entities/enums";
 
 export class OrganizationMemberDto {
     id: string;

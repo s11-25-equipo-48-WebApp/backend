@@ -1,6 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Exclude } from 'class-transformer';
-import { Role } from "./enums";
 import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity";
 import { UserProfile } from "./userProfile.entity";
 import { AuthToken } from "./authToken.entity";

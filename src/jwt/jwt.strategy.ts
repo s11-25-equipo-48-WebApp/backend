@@ -5,7 +5,6 @@ import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role } from 'src/modules/auth/entities/enums';
 import { OrganizationUser } from 'src/modules/organization/entities/organization_user.entity';
 
 

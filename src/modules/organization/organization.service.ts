@@ -8,10 +8,10 @@ import { AddOrganizationMemberDto, UpdateOrganizationDto, UpdateOrganizationMemb
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { AuthToken } from "../auth/entities/authToken.entity";
-import { Role } from "src/modules/auth/entities/enums";
 import * as bcrypt from "bcrypt";
 import { Embed } from "../embedb/entities/embed.entity";
 import { OrganizationMemberDto } from "./dto/organization-member.dto";
+import { Role } from "./entities/enums";
 
 @Injectable()
 export class OrganizationService {

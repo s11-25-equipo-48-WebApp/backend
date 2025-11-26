@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsUUID, IsEnum, IsEmail } from 'class-validator';
-import { Role } from 'src/modules/auth/entities/enums';
+import { Role } from '../entities/enums';
 
 export class CreateOrganizationDto {
   @IsString()

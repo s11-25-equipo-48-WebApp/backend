@@ -12,9 +12,11 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
-import { Role, Status } from '../auth/entities/enums';
+//import { Role, Status } from '../auth/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
+import { Role } from 'src/testing/entities/enums';
+import { Status } from '../organization/entities/enums';
 
 @Injectable()
 export class TestimoniosService {
@@ -32,23 +34,27 @@ export class TestimoniosService {
      * Crea un testimonio.
      * Estado inicial: 'pending'.
      */
-    async create(dto: CreateTestimonioDto, user?: RequestWithUser['user']): Promise<Testimonio> {
-        if (!user || !user.organization?.id) {
-            throw new UnauthorizedException('Se requiere una organización para crear testimonios.');
+    async create(dto: CreateTestimonioDto, user: RequestWithUser['user'], organizationId: string): Promise<Testimonio> {
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para crear testimonios en esta organización.');
         }
 
-        const organization = await this.organizationRepo.findOneBy({ id: user.organization.id });
+        const organization = await this.organizationRepo.findOneBy({ id: organizationId });
         if (!organization) {
-            throw new BadRequestException(`Organización con ID ${user.organization.id} no encontrada.`);
+            throw new BadRequestException(`Organización con ID ${organizationId} no encontrada.`);
         }
 
-        // validar/obtener categoría
-        const category = await this.categoryRepo.findOne({ where: { id: dto.category_id } });
-        if (!category) throw new BadRequestException(`Category ${dto.category_id} not found`);
+        // validar/obtener categoría, asegurándose de que pertenezca a la organización
+        const category = await this.categoryRepo.findOne({
+            where: { id: dto.category_id, organization: { id: organizationId } }
+        });
+        if (!category) throw new BadRequestException(`Category ${dto.category_id} not found or does not belong to this organization`);
 
-        // validar/obtener tags
+        // validar/obtener tags, asegurándose de que pertenezcan a la organización
         const tags = dto.tags && dto.tags.length > 0
-            ? await this.tagRepo.find({ where: { id: In(dto.tags) } })
+            ? await this.tagRepo.find({
+                where: { id: In(dto.tags), organization: { id: organizationId } }
+            })
             : [];
 
         if (dto.tags && tags.length !== dto.tags.length) {
@@ -91,14 +97,15 @@ export class TestimoniosService {
         id: string,
         dto: UpdateTestimonioDto,
         user: RequestWithUser['user'],
+        organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
 
         // Buscar testimonio y validar organización
-        if (!user || !user.organization?.id) {
-            throw new UnauthorizedException('Se requiere una organización para editar testimonios.');
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para editar testimonios en esta organización.');
         }
 
-        const existing = await this.repo.findOneById(id, user.organization.id);
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
             throw new NotFoundException(`Testimonio con ID ${id} no encontrado en su organización.`);
         }
@@ -195,12 +202,13 @@ export class TestimoniosService {
         id: string,
         dto: UpdateStatusDto,
         user: RequestWithUser['user'],
+        organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
         // buscar testimonio
-        if (!user || !user.organization?.id) {
-            throw new UnauthorizedException('Se requiere una organización para cambiar el estado del testimonio.');
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para cambiar el estado de testimonios en esta organización.');
         }
-        const existing = await this.repo.findOneById(id, user.organization.id);
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
@@ -329,12 +337,12 @@ export class TestimoniosService {
     * - Marca deleted_at.
     * - Registra audit_log con diff (before/after).
     */
-    async softDelete(id: string, user: RequestWithUser['user']): Promise<{ id: string; deleted_at: Date }> {
+    async softDelete(id: string, user: RequestWithUser['user'], organizationId: string): Promise<{ id: string; deleted_at: Date }> {
         //  buscar (ya excluye borrados)
-        if (!user || !user.organization?.id) {
-            throw new UnauthorizedException('Se requiere una organización para eliminar testimonios.');
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para eliminar testimonios en esta organización.');
         }
-        const existing = await this.repo.findOneById(id, user.organization.id);
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
@@ -384,14 +392,14 @@ export class TestimoniosService {
         return { id: saved.id, deleted_at: saved.deleted_at! };
     }
 
-    async findPublic(query: GetTestimoniosQueryDto) {
+    async findPublic(query: GetTestimoniosQueryDto): Promise<{ data: Testimonio[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
         const page = query.page && query.page > 0 ? query.page : 1;
         const limit = query.limit && query.limit > 0 ? query.limit : 20;
 
         const [items, total] = await this.repo.findPublicWithFilters({
             category_id: query.category_id,
             tag_id: query.tag_id,
-            organization_id: query.organization_id, // Pasar organization_id desde la consulta
+            organization_id: query.organization_id,
             page,
             limit,
         });

@@ -1,6 +1,6 @@
 import { IsEmail, IsEnum, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from 'src/modules/auth/entities/enums';
+import { Role } from '../entities/enums';
 
 export class CreateOrganizationMemberDto {
   @ApiProperty({

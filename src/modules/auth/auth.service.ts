@@ -8,9 +8,10 @@ import { LoginUserDto } from "./dto/login.user.dto";
 import { ConfigService } from "@nestjs/config";
 import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
-import { Role } from "./entities/enums";
+//import { Role } from "./entities/enums";
 import { Organization } from "../organization/entities/organization.entity";
 import { OrganizationUser } from "../organization/entities/organization_user.entity";
+import { Role } from "../organization/entities/enums";
 
 @Injectable()
 export class AuthService {
