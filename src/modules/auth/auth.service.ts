@@ -110,6 +110,7 @@ export class AuthService {
     });
 
     const organizationId = loginOrgUserRelation?.organization?.id || null;
+    const organizationName = loginOrgUserRelation?.organization?.name || null;
 
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
@@ -124,7 +125,7 @@ export class AuthService {
     const userRole = loginOrgUserRelation?.role || '';
 
 
-    const payload = { sub: user.id, email: user.email, role: userRole, organization: organizationId ? { id: organizationId, role: userRole } : null };
+    const payload = { sub: user.id, email: user.email, organization: organizationId ? { id: organizationId, name: organizationName, role: userRole } : null };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -154,7 +155,7 @@ export class AuthService {
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
-      organization: organizationId ? { id: organizationId, role: userRole } : null,
+      organization: organizationId ? { id: organizationId, name: organizationName, role: userRole } : null,
     };
   }
 
@@ -181,8 +182,11 @@ export class AuthService {
       relations: ['organization'],
     });
     const organizationId = refreshOrgUserRelation?.organization?.id || null;
+    const userRole = refreshOrgUserRelation?.role || '';
+    const organizationName = refreshOrgUserRelation?.organization?.name || null;
+    const organizationPayload = organizationId ? { id: organizationId, name: organizationName, role: userRole } : null;
 
-    const payload = { sub: user.id, email: user.email, organizationId };
+    const payload = { sub: user.id, email: user.email, organization: organizationPayload };
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -210,6 +214,7 @@ export class AuthService {
       refreshToken: newRefreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
+      organization: organizationPayload,
     };
   }
 
