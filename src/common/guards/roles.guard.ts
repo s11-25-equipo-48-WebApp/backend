@@ -17,9 +17,22 @@ export class RolesGuard implements CanActivate {
     }
     const { user } = context.switchToHttp().getRequest();
     if (!user) { // Si no hay usuario (ej. JwtAuthGuard falló o no se autenticó), denegar el acceso
+        console.log('[RolesGuard] Usuario no encontrado, denegando acceso.');
         return false;
     }
-    // Comparar el rol del usuario con los roles requeridos
-    return requiredRoles.some((role) => user.role === role);
+    console.log(`[RolesGuard] User global role: ${user.userRole}`);
+    console.log(`[RolesGuard] Organization role: ${user.organizationRole}`);
+    console.log(`[RolesGuard] Required roles: ${requiredRoles.join(', ')}`);
+
+    const hasPermission = requiredRoles.some((role) => user.userRole === role);
+    console.log(`[RolesGuard] Has permission (global role): ${hasPermission}`);
+
+    // Si también queremos verificar el rol de la organización para algunos endpoints
+    // if (user.organizationRole && requiredRoles.some((role) => user.organizationRole === role)) {
+    //   console.log('[RolesGuard] Has permission (organization role): true');
+    //   return true;
+    // }
+
+    return hasPermission;
   }
 }

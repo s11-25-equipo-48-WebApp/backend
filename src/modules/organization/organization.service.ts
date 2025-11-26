@@ -163,7 +163,7 @@ export class OrganizationService {
       await this.organizationUserRepository.save(organizationUser);
 
       // Generar nuevos tokens con la nueva organizationId
-      const payload = { sub: user.id, email: user.email, role: userRole, organizationId: organization.id };
+      const payload = { sub: user.id, email: user.email, role: userRole, organization :{ id: organization.id, role: Role.ADMIN } };
 
       const newAccessToken = this.jwtService.sign(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),

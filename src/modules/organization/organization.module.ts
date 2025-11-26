@@ -24,15 +24,18 @@ import { AuthToken } from "../auth/entities/authToken.entity";
                 },
             }),
         }),
-        TypeOrmModule.forFeature([Organization, OrganizationUser, User, AuthToken]),
+        TypeOrmModule.forFeature([
+            Organization, 
+            OrganizationUser,
+            User, 
+            AuthToken
+        ]),
         forwardRef(() => AuthModule),
     ],
     controllers: [OrganizationController],
     providers: [OrganizationService],
-    exports: [OrganizationService, TypeOrmModule.forFeature([Organization, OrganizationUser, User, AuthToken])],
+    exports: [
+        OrganizationService,
+        TypeOrmModule],
 })
-export class OrganizationModule {
-  static forFeature(arg0: (typeof Organization)[]): import("@nestjs/common").Type<any> | import("@nestjs/common").DynamicModule | Promise<import("@nestjs/common").DynamicModule> | import("@nestjs/common").ForwardReference<any> {
-    throw new Error('Method not implemented.');
-  }
-}
+export class OrganizationModule {}

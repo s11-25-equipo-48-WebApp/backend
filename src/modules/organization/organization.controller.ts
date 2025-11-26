@@ -278,7 +278,7 @@ export class OrganizationController {
       };
     } else {
       // Si el usuario no existe, registrarlo y asignarlo a la organización
-      const { id, accessToken, estado, createdAt, organizationId, role } = await this.authService.register(
+      const { id, accessToken, estado, createdAt, organization } = await this.authService.register(
         createMemberDto,
         user.organizationId,
         createMemberDto.role || Role.EDITOR, // Por defecto asignamos EDITOR si no se especifica
@@ -290,8 +290,7 @@ export class OrganizationController {
         accessToken,
         estado,
         createdAt,
-        organizationId,
-        role,
+        organization,
       };
     }
   }

@@ -46,28 +46,37 @@ export class AuthService {
       email,
       password_hash: hashedPassword,
       is_active: true,
-      role: role || Role.ADMIN, // Usar el rol proporcionado, o ADMIN por defecto
       name: email.split('@')[0],
     });
     await this.usersRepository.save(newUser);
 
-    let assignedOrganizationId: string | null = null; // Corregir el tipo aquí
+    //let assignedOrganizationId: string | null = null;
+
+    let orgPayload: { id: string; role: Role } | null = null;
+
     if (organizationId) {
-        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
-        if (!organization) {
-            throw new BadRequestException(`Organización con ID ${organizationId} no encontrada.`);
-        }
-        
-        const organizationUser = this.organizationUserRepository.create({
-            user: newUser,
-            organization: organization,
-            role: role || Role.EDITOR, // Rol del usuario en la organización
-        });
-        await this.organizationUserRepository.save(organizationUser);
-        assignedOrganizationId = organization.id;
+      const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+      if (!organization) throw new BadRequestException(`Organización con ID ${organizationId} no encontrada`);
+
+      const organizationUser = this.organizationUserRepository.create({
+        user: newUser,
+        organization: organization,
+        role: role || Role.EDITOR,
+      });
+
+      await this.organizationUserRepository.save(organizationUser);
+
+      orgPayload = {
+        id: organization.id,
+        role: organizationUser.role,
+      };
     }
 
-    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role, organizationId: assignedOrganizationId };
+    const payload = {
+      sub: newUser.id,
+      email: newUser.email,
+      organization: orgPayload,
+    };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -79,8 +88,7 @@ export class AuthService {
       accessToken,
       estado: newUser.is_active ? 'activo' : 'pendiente',
       createdAt: newUser.created_at,
-      organizationId: assignedOrganizationId,
-      role: newUser.role,
+      organization: orgPayload,
     };
   }
 
@@ -103,7 +111,6 @@ export class AuthService {
 
     const organizationId = loginOrgUserRelation?.organization?.id || null;
 
-    // Revocar tokens anteriores
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
       { revoked: true },
@@ -113,7 +120,11 @@ export class AuthService {
       expires_at: LessThan(new Date()),
     });
 
-    const payload = { sub: user.id, email: user.email, role: user.role, organizationId };
+    const organization = await this.organizationRepository.findOneBy({ members: { user: { id: user.id } } });
+    const userRole = loginOrgUserRelation?.role || '';
+
+
+    const payload = { sub: user.id, email: user.email, role: userRole, organization: organizationId ? { id: organizationId, role: userRole } : null };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -138,13 +149,12 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
       profile: user.profile,
       accessToken,
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
-      organizationId: organizationId, // Corregido: usar el organizationId ya resuelto
+      organization: organizationId ? { id: organizationId, role: userRole } : null,
     };
   }
 
@@ -166,14 +176,13 @@ export class AuthService {
     tokenInDb.revoked = true;
     await this.authTokenRepository.save(tokenInDb);
 
-    // Obtener el organizationId del usuario actual
     const refreshOrgUserRelation = await this.organizationUserRepository.findOne({
       where: { user: { id: user.id } },
       relations: ['organization'],
     });
     const organizationId = refreshOrgUserRelation?.organization?.id || null;
 
-    const payload = { sub: user.id, email: user.email, role: user.role, organizationId };
+    const payload = { sub: user.id, email: user.email, organizationId };
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
