@@ -9,10 +9,12 @@ import { AuthController } from "./auth.controller";
 import { JwtRefreshStrategy } from "src/jwt/JwtRefreshStrategy";
 import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
-
+import { OrganizationUser } from "../organization/entities/organization_user.entity";
+import { Organization } from "../organization/entities/organization.entity";
 
 @Module({
   imports: [
+    ConfigModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -24,10 +26,22 @@ import { AuthToken } from "./entities/authToken.entity";
         },
       }),
     }),
-    TypeOrmModule.forFeature([User, AuthToken]),
+    TypeOrmModule.forFeature([
+      User, 
+      AuthToken, 
+      OrganizationUser,
+      Organization,
+    ]),
   ],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [
+    AuthService, 
+    JwtStrategy, 
+    JwtRefreshStrategy,
+  ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [
+    AuthService,
+    JwtStrategy
+  ],
 })
 export class AuthModule {}

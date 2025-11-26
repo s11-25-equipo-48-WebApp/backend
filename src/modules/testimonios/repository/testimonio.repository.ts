@@ -18,8 +18,12 @@ export class TestimonioRepository {
     return this.repo.save(entity);
   }
 
-  findOneById(id: string) {
-    return this.repo.findOne({ where: { id, deleted_at: IsNull() } });
+  findOneById(id: string, organizationId?: string) {
+    const whereCondition: any = { id, deleted_at: IsNull() };
+    if (organizationId) {
+      whereCondition.organization = { id: organizationId };
+    }
+    return this.repo.findOne({ where: whereCondition });
   }
 
 async softDelete(entity: Testimonio) {
@@ -37,6 +41,7 @@ async softDelete(entity: Testimonio) {
 async findPublicWithFilters(opts: {
   category_id?: string;
   tag_id?: string;
+  organization_id?: string; // Nuevo: organization_id
   page?: number;
   limit?: number;
 }): Promise<[Testimonio[], number]> {
@@ -55,6 +60,11 @@ async findPublicWithFilters(opts: {
 
   if (opts.tag_id) {
     qb.andWhere('tag.id = :tagId', { tagId: opts.tag_id });
+  }
+
+  // Nuevo: filtrar por organization_id
+  if (opts.organization_id) {
+    qb.andWhere('t.organization_id = :organizationId', { organizationId: opts.organization_id });
   }
 
   qb.orderBy('t.created_at', 'DESC').skip(skip).take(limit);

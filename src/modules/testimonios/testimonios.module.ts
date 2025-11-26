@@ -9,11 +9,13 @@ import { TagsExist } from './validators/tags-exist.validator';
 import { AuditLog } from './entities/audit-log.entity';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
+import { OrganizationModule } from '../organization/organization.module';
 
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Testimonio, Category, Tag, AuditLog])],
+  imports: [TypeOrmModule.forFeature([Testimonio, Category, Tag, AuditLog]),
+    OrganizationModule],
   controllers: [TestimoniosController],
   providers: [
     TestimoniosService,
@@ -23,4 +25,4 @@ import { Tag } from 'src/modules/tags/entities/tag.entity';
   ],
   exports: [TestimoniosService],
 })
-export class TestimoniosModule {}
+export class TestimoniosModule { }

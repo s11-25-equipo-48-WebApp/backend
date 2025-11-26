@@ -8,7 +8,10 @@ import { LoginUserDto } from "./dto/login.user.dto";
 import { ConfigService } from "@nestjs/config";
 import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
-import { Role } from "./entities/enums";
+//import { Role } from "./entities/enums";
+import { Organization } from "../organization/entities/organization.entity";
+import { OrganizationUser } from "../organization/entities/organization_user.entity";
+import { Role } from "../organization/entities/enums";
 
 @Injectable()
 export class AuthService {
@@ -17,24 +20,30 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-
     @InjectRepository(AuthToken)
     private readonly authTokenRepository: Repository<AuthToken>,
-
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(Organization)
+    private readonly organizationRepository: Repository<Organization>,
+    @InjectRepository(OrganizationUser)
+    private readonly organizationUserRepository: Repository<OrganizationUser>,
   ) {
     this.logger = new Logger(AuthService.name);
   }
 
   // ====================
   // Registro de usuario
+  // Este método solo registra al usuario sin asignarlo a ninguna organización.
+  // La asignación a una organización se manejará por separado por el OrganizationService.
   // ====================
-  async register(registerUserDto: RegisterUserDto) {
+  async register(registerUserDto: RegisterUserDto): Promise<User> {
     const { email, password } = registerUserDto;
 
     const existingUser = await this.usersRepository.findOne({ where: { email } });
-    if (existingUser) throw new BadRequestException('El email ya está registrado');
+    if (existingUser) {
+      throw new BadRequestException('El email ya está registrado');
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -42,24 +51,40 @@ export class AuthService {
       email,
       password_hash: hashedPassword,
       is_active: true,
-      role: Role.ADMIN,
       name: email.split('@')[0],
     });
     await this.usersRepository.save(newUser);
+    return newUser;
+  }
 
-    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role };
+  // ====================
+  // Generar Access Token para un usuario
+  // ====================
+  // ====================
+  // Generar Access Token para un usuario con todas sus organizaciones
+  // ====================
+  async generateAccessTokenForUser(user: User): Promise<string> {
+    const userOrganizations = await this.organizationUserRepository.find({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
 
-    const accessToken = this.jwtService.sign(payload, {
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      organizations: organizationsPayload,
+    };
+
+    return this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
     });
-
-    return {
-      id: newUser.id,
-      accessToken,
-      estado: newUser.is_active ? 'activo' : 'pendiente',
-      createdAt: newUser.created_at,
-    };
   }
 
   // ====================
@@ -74,7 +99,18 @@ export class AuthService {
     const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
 
-    // Revocar tokens anteriores
+    // Obtener todas las organizaciones del usuario
+    const userOrganizations = await this.organizationUserRepository.find({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
+
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
+
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
       { revoked: true },
@@ -84,7 +120,7 @@ export class AuthService {
       expires_at: LessThan(new Date()),
     });
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -109,13 +145,17 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
       profile: user.profile,
       accessToken,
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
+      organizations: organizationsPayload,
     };
+  }
+
+  async findUserByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
   }
 
   // ====================
@@ -132,7 +172,19 @@ export class AuthService {
     tokenInDb.revoked = true;
     await this.authTokenRepository.save(tokenInDb);
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // Obtener todas las organizaciones del usuario para el refresh token
+    const userOrganizations = await this.organizationUserRepository.find({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
+
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
+
+    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -160,6 +212,7 @@ export class AuthService {
       refreshToken: newRefreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
+      organizations: organizationsPayload,
     };
   }
 

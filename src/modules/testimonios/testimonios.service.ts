@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { In, Repository } from 'typeorm';
 import { TestimonioRepository } from './repository/testimonio.repository';
@@ -12,7 +12,11 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
-import { Status } from '../auth/entities/enums';
+//import { Role, Status } from '../auth/entities/enums';
+import { Organization } from 'src/modules/organization/entities/organization.entity';
+import { OrganizationUser } from '../organization/entities/organization_user.entity';
+import { Role } from 'src/testing/entities/enums';
+import { Status } from '../organization/entities/enums';
 
 @Injectable()
 export class TestimoniosService {
@@ -22,20 +26,35 @@ export class TestimoniosService {
         private readonly auditRepo: Repository<AuditLog>,
         @InjectRepository(Category) private readonly categoryRepo: Repository<Category>,
         @InjectRepository(Tag) private readonly tagRepo: Repository<Tag>,
+        @InjectRepository(Organization) private readonly organizationRepo: Repository<Organization>,
+        @InjectRepository(OrganizationUser) private readonly organizationUserRepo: Repository<OrganizationUser>,
     ) { }
 
     /**
      * Crea un testimonio.
      * Estado inicial: 'pending'.
      */
-    async create(dto: CreateTestimonioDto, user?: RequestWithUser['user']): Promise<Testimonio> {
-        // validar/obtener categoría
-        const category = await this.categoryRepo.findOne({ where: { id: dto.category_id } });
-        if (!category) throw new BadRequestException(`Category ${dto.category_id} not found`);
+    async create(dto: CreateTestimonioDto, user: RequestWithUser['user'], organizationId: string): Promise<Testimonio> {
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para crear testimonios en esta organización.');
+        }
 
-        // validar/obtener tags
+        const organization = await this.organizationRepo.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new BadRequestException(`Organización con ID ${organizationId} no encontrada.`);
+        }
+
+        // validar/obtener categoría, asegurándose de que pertenezca a la organización
+        const category = await this.categoryRepo.findOne({
+            where: { id: dto.category_id, organization: { id: organizationId } }
+        });
+        if (!category) throw new BadRequestException(`Category ${dto.category_id} not found or does not belong to this organization`);
+
+        // validar/obtener tags, asegurándose de que pertenezcan a la organización
         const tags = dto.tags && dto.tags.length > 0
-            ? await this.tagRepo.find({ where: { id: In(dto.tags) } })
+            ? await this.tagRepo.find({
+                where: { id: In(dto.tags), organization: { id: organizationId } }
+            })
             : [];
 
         if (dto.tags && tags.length !== dto.tags.length) {
@@ -50,10 +69,19 @@ export class TestimoniosService {
             tags,
             media_url: dto.media_url ?? null,
             media_type: dto.media_type,
-            author: dto.author ?? null,
             author_id: user?.id ?? null,
-            status: Status.PENDIENTE,
+            organization: organization, // Asociar el testimonio con la organización
         });
+
+        // Lógica para determinar el estado inicial del testimonio
+        const isAdminOrSuperAdmin = user?.organization?.role === Role.ADMIN || user?.organization?.role === Role.SUPERADMIN;
+        entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
+
+        // Si se aprueba automáticamente, establecer approved_by y approved_at
+        if (entity.status === Status.APROBADO) {
+            entity.approved_by = user.id;
+            entity.approved_at = new Date();
+        }
 
         return this.repo.save(entity);
     }
@@ -68,12 +96,17 @@ export class TestimoniosService {
         id: string,
         dto: UpdateTestimonioDto,
         user: RequestWithUser['user'],
+        organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
 
-        // Buscar testimonio
-        const existing = await this.repo.findOneById(id);
+        // Buscar testimonio y validar organización
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para editar testimonios en esta organización.');
+        }
+
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
-            throw new NotFoundException(`Testimonio with id ${id} not found`);
+            throw new NotFoundException(`Testimonio con ID ${id} no encontrado en su organización.`);
         }
 
         // Validar usuario presente
@@ -81,13 +114,13 @@ export class TestimoniosService {
             throw new ForbiddenException('Authentication required to edit testimonio');
         }
 
-        const isAdmin = user.role === 'admin';
+        const isAdmin = user.organization?.role === Role.ADMIN || user.organization?.role === Role.SUPERADMIN; // Incluir superadmin
         const isAuthor = existing.author_id === user.id;
 
-        // Permisos: autor o admin
+        // Permisos: autor, admin o superadmin
         if (!isAdmin && !isAuthor) {
             throw new ForbiddenException(
-                'Only the author or an admin can edit this testimonio',
+                'Only the author, an admin or superadmin can edit this testimonio',
             );
         }
 
@@ -168,11 +201,15 @@ export class TestimoniosService {
         id: string,
         dto: UpdateStatusDto,
         user: RequestWithUser['user'],
+        organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
         // buscar testimonio
-        const existing = await this.repo.findOneById(id);
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para cambiar el estado de testimonios en esta organización.');
+        }
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
-            throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+            throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
 
         // validar usuario
@@ -181,8 +218,8 @@ export class TestimoniosService {
         }
 
         // validar rol
-        const role = user.role as string;
-        const isAdmin = role === 'admin'
+        const userOrganizationRole = user.organization.role;
+        const isAdmin = userOrganizationRole === Role.ADMIN;
 
         if (!isAdmin) {
             throw new ForbiddenException('Solo un administrador puede cambiar el estado');
@@ -299,11 +336,14 @@ export class TestimoniosService {
     * - Marca deleted_at.
     * - Registra audit_log con diff (before/after).
     */
-    async softDelete(id: string, user: RequestWithUser['user']): Promise<{ id: string; deleted_at: Date }> {
+    async softDelete(id: string, user: RequestWithUser['user'], organizationId: string): Promise<{ id: string; deleted_at: Date }> {
         //  buscar (ya excluye borrados)
-        const existing = await this.repo.findOneById(id);
+        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+            throw new UnauthorizedException('No autorizado para eliminar testimonios en esta organización.');
+        }
+        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
         if (!existing) {
-            throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+            throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
 
         // validar usuario
@@ -312,8 +352,8 @@ export class TestimoniosService {
         }
 
         // sólo admin puede eliminar (según criterio)
-        const role = user.role as string;
-        const isAdmin = role === 'admin'
+        const userOrganizationRole = user.organization.role;
+        const isAdmin = userOrganizationRole === Role.ADMIN;
         if (!isAdmin) {
             throw new ForbiddenException('Solo administradores pueden eliminar testimonios');
         }
@@ -351,13 +391,14 @@ export class TestimoniosService {
         return { id: saved.id, deleted_at: saved.deleted_at! };
     }
 
-    async findPublic(query: GetTestimoniosQueryDto) {
+    async findPublic(query: GetTestimoniosQueryDto): Promise<{ data: Testimonio[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
         const page = query.page && query.page > 0 ? query.page : 1;
         const limit = query.limit && query.limit > 0 ? query.limit : 20;
 
         const [items, total] = await this.repo.findPublicWithFilters({
             category_id: query.category_id,
             tag_id: query.tag_id,
+            organization_id: query.organization_id,
             page,
             limit,
         });

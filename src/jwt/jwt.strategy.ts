@@ -1,14 +1,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy, StrategyOptionsWithRequest } from 'passport-jwt';
-//import { Role } from '../common/entities/enums';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { Role } from 'src/modules/auth/entities/enums';
+
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -25,8 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
     console.log(
-      `[JwtStrategy] Access token recibido: ${
-        token ? token.substring(0, 10) + '...' : 'No token'
+      `[JwtStrategy] Access token recibido: ${token ? token.substring(0, 10) + '...' : 'No token'
       }`,
     );
 
@@ -37,10 +37,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     console.log(`[JwtStrategy] Token válido para usuario ${payload.sub}`);
 
+
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role as Role,
+      organizations: payload.organizations || [], // Ahora es un array de organizaciones
     };
   }
 }

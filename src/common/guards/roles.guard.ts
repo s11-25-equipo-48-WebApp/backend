@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { Role } from 'src/modules/auth/entities/enums';
+import { Role } from 'src/modules/organization/entities/enums';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -16,6 +16,13 @@ export class RolesGuard implements CanActivate {
       return true;
     }
     const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.some((role) => user.role?.includes(role));
+    if (!user || !user.organization || !user.organization.role) {
+      // Si no hay usuario, organización o rol de organización, denegar el acceso
+      return false;
+    }
+
+    const userOrganizationRole = user.organization.role;
+
+    return requiredRoles.some((role) => userOrganizationRole === role);
   }
 }

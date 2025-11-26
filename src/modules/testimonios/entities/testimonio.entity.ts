@@ -1,6 +1,8 @@
 import { last } from 'rxjs';
-import { Status } from 'src/modules/auth/entities/enums';
+import { User } from 'src/modules/auth/entities/user.entity';
 import { Category } from 'src/modules/categories/entities/category.entity';
+import { Status } from 'src/modules/organization/entities/enums';
+import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
 import {
   Entity,
@@ -11,6 +13,7 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity('testimonios')
@@ -29,7 +32,7 @@ export class Testimonio {
 
   @ManyToMany(() => Tag, (tag) => tag.testimonios, { eager: false })
   @JoinTable({
-    name: 'testimonios_tags', // nombre de la tabla pivot
+    name: 'testimonios_tags',
     joinColumn: { name: 'testimonio_id', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
   })
@@ -40,9 +43,6 @@ export class Testimonio {
 
   @Column({ type: 'varchar', length: 20 })
   media_type: 'image' | 'video' | 'none';
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  author?: string | null;
 
   @Column({ type: 'uuid', nullable: true })
   author_id?: string | null;
@@ -64,4 +64,12 @@ export class Testimonio {
 
   @Column({ type: 'timestamptz', nullable: true })
   deleted_at?: Date | null;
+
+  @ManyToOne(() => Organization, (org) => org.testimonios, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
+
+  @ManyToOne(() => User, (user) => user.testimonials, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'author_id' })
+  author: User;
 }

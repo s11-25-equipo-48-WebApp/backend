@@ -7,7 +7,6 @@ import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthToken } from 'src/modules/auth/entities/authToken.entity';
-import { Role } from 'src/modules/auth/entities/enums';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
@@ -59,7 +58,12 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role as Role,
+      organization: payload.organization
+        ? {
+            id: payload.organization.id,
+            role: payload.organization.role,
+          }
+        : undefined,
       authToken: tokenInDb,
     };
   }

@@ -26,4 +26,9 @@ export class GetTestimoniosQueryDto {
   @IsInt()
   @Min(1)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Filtrar por ID de organización (uuid)' })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
 }
