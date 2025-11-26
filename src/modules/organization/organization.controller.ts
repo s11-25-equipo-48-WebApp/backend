@@ -16,7 +16,7 @@ import { Role } from "./entities/enums";
 
 @ApiTags('Organization')
 @Controller('organization')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard) // Eliminar RolesGuard para endpoints que no requieren un rol de organización preexistente
 @ApiBearerAuth('access-token')
 export class OrganizationController {
   constructor(
@@ -51,11 +51,11 @@ export class OrganizationController {
     if (!user || !user.id) {
       throw new UnauthorizedException('Usuario no autenticado.');
     }
-    if (user.organization?.id) {
-      throw new BadRequestException('El usuario ya pertenece a una organización.');
+    if (user.organizations && user.organizations.length > 0) {
+      throw new BadRequestException('El usuario ya pertenece a una o más organizaciones.');
     }
 
-    const { organization, newAccessToken, newRefreshToken } = await this.organizationService.createOrganizationAndAssignUser(
+    const { organizations, newAccessToken, newRefreshToken } = await this.organizationService.createOrganizationAndAssignUser(
       user.id,
       createOrganizationDto,
     );
@@ -69,27 +69,34 @@ export class OrganizationController {
 
     return {
       message: 'Organización creada y asignada exitosamente.',
-      organizationId: organization.id,
+      organizations: organizations,
       accessToken: newAccessToken,
-      userRole: organization.role,
     };
   }
 
-  @Get()
+  @Get(':organizationId')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Obtener detalles de la organización del token' })
+  @ApiOperation({ summary: 'Obtener detalles de una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Detalles de la organización' })
-  async getOrganizationDetails(@Req() req) {
+  async getOrganizationDetails(
+    @Param('organizationId') organizationId: string,
+    @Req() req
+  ) {
     const user = req.user;
-    if (!user || !user.organization?.id) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para acceder a esta organización o rol insuficiente.');
     }
-    return this.organizationService.getOrganizationDetails(user.organization.id);
+    return this.organizationService.getOrganizationDetails(organizationId);
   }
 
-  @Patch()
+  @Patch(':organizationId')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Actualizar la organización del token' })
+  @ApiOperation({ summary: 'Actualizar una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Organización actualizada' })
   @ApiBody({
     type: UpdateOrganizationDto,
@@ -101,26 +108,34 @@ export class OrganizationController {
     },
   })
   async updateOrganization(
+    @Param('organizationId') organizationId: string,
     @Body() updateDto: UpdateOrganizationDto,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para actualizar esta organización o rol insuficiente.');
     }
-    return this.organizationService.updateOrganization(user.organization.id, updateDto);
+    return this.organizationService.updateOrganization(organizationId, updateDto);
   }
 
-  @Delete()
+  @Delete(':organizationId')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Eliminar la organización del token' })
+  @ApiOperation({ summary: 'Eliminar una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Organización eliminada' })
-  async deleteOrganization(@Req() req) {
+  async deleteOrganization(
+    @Param('organizationId') organizationId: string,
+    @Req() req
+  ) {
     const user = req.user;
-    if (!user || !user.organization?.id) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para eliminar esta organización o rol insuficiente.');
     }
-    await this.organizationService.deleteOrganization(user.organization.id);
+    await this.organizationService.deleteOrganization(organizationId);
     return { message: 'Organización eliminada exitosamente' };
   }
 
@@ -128,9 +143,11 @@ export class OrganizationController {
   // Endpoints de Miembros de Organización
   // ====================
 
-  @Post('members')
+  @Post(':organizationId/members')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Agregar un miembro a la organización del token' })
+  @ApiOperation({ summary: 'Agregar un miembro a una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Miembro agregado' })
   @ApiBody({
     type: AddOrganizationMemberDto,
@@ -142,44 +159,54 @@ export class OrganizationController {
     },
   })
   async addMember(
+    @Param('organizationId') organizationId: string,
     @Body() addMemberDto: AddOrganizationMemberDto,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id || !user.organization?.role) {
-      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para agregar miembros a esta organización o rol insuficiente.');
     }
     // Solo permitir añadir roles de EDITOR o ADMIN para usuarios normales
-    if (user.organization.role === Role.ADMIN && (addMemberDto.role === Role.SUPERADMIN)) {
+    if (userOrg.role === Role.ADMIN && (addMemberDto.role === Role.SUPERADMIN)) {
       throw new UnauthorizedException('Un administrador no puede agregar miembros con rol SUPERADMIN.');
     }
-    Logger.log(`addMember: userId: ${user.id}, organizationId: ${user.organization.id}`);
-    return this.organizationService.addMember(user.organization.id, addMemberDto);
+    Logger.log(`addMember: userId: ${user.id}, organizationId: ${organizationId}`);
+    return this.organizationService.addMember(organizationId, addMemberDto);
   }
 
-  @Delete('members/:userId')
+  @Delete(':organizationId/members/:userId')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Eliminar un miembro de la organización del token' })
+  @ApiOperation({ summary: 'Eliminar un miembro de una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid)' })
   @ApiOkResponse({ description: 'Miembro eliminado' })
   async removeMember(
+    @Param('organizationId') organizationId: string,
     @Param('userId') userId: string,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id || !user.organization?.role) {
-      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para eliminar miembros de esta organización o rol insuficiente.');
     }
     // Un administrador no puede eliminarse a sí mismo ni a otros administradores o superadministradores
-    if (user.organization.role === Role.ADMIN && (user.id === userId || (await this.organizationService.getOrganizationDetails(user.organization.id)).members.some(m => m.user.id === userId && (m.role === Role.ADMIN || m.role === Role.SUPERADMIN)))) {
+    if (userOrg.role === Role.ADMIN && (user.id === userId || (await this.organizationService.getOrganizationDetails(organizationId)).members.some(m => m.user.id === userId && (m.role === Role.ADMIN || m.role === Role.SUPERADMIN)))) {
       throw new UnauthorizedException('Un administrador no puede eliminar a otros administradores o superadministradores, ni eliminarse a sí mismo.');
     }
-    await this.organizationService.removeMember(user.organization.id, userId);
+    await this.organizationService.removeMember(organizationId, userId);
     return { message: 'Miembro eliminado exitosamente' };
   }
 
-  @Patch('members/:userId/role')
+  @Patch(':organizationId/members/:userId/role')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Actualizar el rol de un miembro de la organización del token' })
+  @ApiOperation({ summary: 'Actualizar el rol de un miembro de una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid)' })
   @ApiOkResponse({ description: 'Rol del miembro actualizado' })
   @ApiBody({
     type: UpdateOrganizationMemberRoleDto,
@@ -195,17 +222,19 @@ export class OrganizationController {
     },
   })
   async updateMemberRole(
+    @Param('organizationId') organizationId: string,
     @Param('userId') userId: string,
     @Body() updateRoleDto: UpdateOrganizationMemberRoleDto,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id || !user.organization?.role) {
-      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para actualizar roles de miembros en esta organización o rol insuficiente.');
     }
     // Un administrador no puede cambiar el rol de un superadministrador ni a sí mismo a un rol inferior
-    if (user.organization.role === Role.ADMIN) {
-      const targetMember = await this.organizationService.getOrganizationDetails(user.organization.id).then(org => org.members.find(m => m.user.id === userId));
+    if (userOrg.role === Role.ADMIN) {
+      const targetMember = await this.organizationService.getOrganizationDetails(organizationId).then(org => org.members.find(m => m.user.id === userId));
       if (targetMember && targetMember.role === Role.SUPERADMIN) {
         throw new UnauthorizedException('Un administrador no puede cambiar el rol de un SUPERADMIN.');
       }
@@ -219,95 +248,62 @@ export class OrganizationController {
         throw new UnauthorizedException('Un administrador no puede asignar el rol SUPERADMIN.');
       }
     }
-    return this.organizationService.updateMemberRole(user.organization.id, userId, updateRoleDto);
+    return this.organizationService.updateMemberRole(organizationId, userId, updateRoleDto);
   }
 
-  @Post('members/register')
+  @Post(':organizationId/members/register')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Registrar un nuevo usuario y asignarlo a la organización del token' })
-  @ApiOkResponse({ description: 'Usuario registrado y asignado a la organización' })
+  @ApiOperation({ summary: 'Agregar un miembro (por ID de usuario o email) a una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiOkResponse({ description: 'Miembro agregado exitosamente' })
   @ApiBody({
     type: CreateOrganizationMemberDto,
     examples: {
       a: {
-        summary: 'Ejemplo de agregar un miembro existente con rol EDITOR (sin password)',
-        value: { email: 'existente@example.com', role: Role.EDITOR },
+        summary: 'Agregar un miembro existente por ID de usuario con rol EDITOR',
+        value: { userId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', role: Role.EDITOR },
       },
       b: {
-        summary: 'Ejemplo de registro de un nuevo miembro con rol EDITOR (con password)',
-        value: { email: 'nuevo@example.com', password: 'password123', role: Role.EDITOR },
+        summary: 'Agregar un miembro existente por email con rol ADMIN',
+        value: { email: 'existente@example.com', role: Role.ADMIN },
       },
     },
   })
   @HttpCode(HttpStatus.CREATED)
   async registerMember(
+    @Param('organizationId') organizationId: string,
     @Body() createMemberDto: CreateOrganizationMemberDto,
     @Req() req,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id || !user.organization?.role) {
-      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para agregar miembros a esta organización o rol insuficiente.');
     }
 
     // Un administrador no puede registrar miembros con rol SUPERADMIN
-    if (user.organization.role === Role.ADMIN && createMemberDto.role === Role.SUPERADMIN) {
-      throw new UnauthorizedException('Un administrador no puede registrar miembros con rol SUPERADMIN.');
+    if (userOrg.role === Role.ADMIN && createMemberDto.role === Role.SUPERADMIN) {
+      throw new UnauthorizedException('Un administrador no puede asignar el rol SUPERADMIN.');
     }
 
-    const existingUser = await this.authService.findUserByEmail(createMemberDto.email);
+    const { userId, email, role } = createMemberDto;
 
-    if (existingUser) {
-      // Si el usuario ya existe, intentar añadirlo a la organización
-      const organizationDetails = await this.organizationService.getOrganizationDetails(user.organization.id);
-      const alreadyMember = organizationDetails.members.some(
-        (member) => member.user.id === existingUser.id,
-      );
-
-      if (alreadyMember) {
-        throw new BadRequestException('El usuario ya es miembro de esta organización.');
-      }
-
-      const addMemberDto: AddOrganizationMemberDto = {
-        email: createMemberDto.email,
-        role: createMemberDto.role || Role.EDITOR,
-      };
-      await this.organizationService.addMember(user.organization.id, addMemberDto);
-
-      return {
-        message: `Usuario ${existingUser.email} agregado a la organización exitosamente con rol ${addMemberDto.role}.`,
-        id: existingUser.id,
-        email: existingUser.email,
-        organizationId: user.organization.id,
-        role: addMemberDto.role,
-      };
+    if (userId) {
+      return this.organizationService.addMemberById(organizationId, userId, role || Role.EDITOR);
+    } else if (email) {
+      return this.organizationService.addMemberByEmail(organizationId, email, role || Role.EDITOR);
     } else {
-      // Si el usuario no existe, registrarlo y asignarlo a la organización
-      // Si no se proporciona contraseña, no se puede registrar un nuevo usuario
-      if (!createMemberDto.password) {
-        throw new BadRequestException('Se requiere una contraseña para registrar un nuevo usuario.');
-      }
-
-      const { id, accessToken, estado, createdAt, organization } = await this.authService.register(
-        { email: createMemberDto.email, password: createMemberDto.password }, // Asegurarse de pasar la contraseña
-        user.organization.id,
-        createMemberDto.role || Role.EDITOR, // Por defecto asignamos EDITOR si no se especifica
-      );
-
-      return {
-        message: 'Usuario registrado y asignado a la organización exitosamente.',
-        id,
-        accessToken,
-        estado,
-        createdAt,
-        organization,
-      };
+      // Esto no debería suceder si IsEitherDefined funciona correctamente, pero es una salvaguarda.
+      throw new BadRequestException('Debe proporcionar un userId o un email para agregar un miembro.');
     }
   }
 
-  @Get('members/:userId') // Nuevo endpoint
+  @Get(':organizationId/members/:userId') // Nuevo endpoint
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN) // Solo ADMIN o SUPERADMIN pueden ver los detalles de un miembro
-  @ApiOperation({ summary: 'Obtener detalles de un miembro de la organización' })
+  @ApiOperation({ summary: 'Obtener detalles de un miembro de una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid)' })
   @ApiOkResponse({
     description: 'Detalles del miembro de la organización',
@@ -326,19 +322,23 @@ export class OrganizationController {
     },
   })
   async getMemberDetails(
+    @Param('organizationId') organizationId: string,
     @Param('userId') userId: string,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para ver detalles de miembros de esta organización o rol insuficiente.');
     }
-    return this.organizationService.getOrganizationMemberDetails(user.organization.id, userId);
+    return this.organizationService.getOrganizationMemberDetails(organizationId, userId);
   }
 
-  @Get('members')
+  @Get(':organizationId/members')
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
-  @ApiOperation({ summary: 'Obtener todos los miembros de la organización del token' })
+  @ApiOperation({ summary: 'Obtener todos los miembros de una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ 
     description: 'Lista de miembros de la organización',
     type: [OrganizationMemberDto], // Indicar que devuelve un array del DTO
@@ -368,12 +368,14 @@ export class OrganizationController {
     },
   })
   async getOrganizationMembers(
+    @Param('organizationId') organizationId: string,
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organization?.id) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR].includes(userOrg.role)) {
+      throw new UnauthorizedException('No autorizado para ver miembros de esta organización o rol insuficiente.');
     }
-    return this.organizationService.getOrganizationMembers(user.organization.id);
+    return this.organizationService.getOrganizationMembers(organizationId);
   }
 }

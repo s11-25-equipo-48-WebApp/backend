@@ -3,17 +3,12 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy, StrategyOptionsWithRequest } from 'passport-jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { OrganizationUser } from 'src/modules/organization/entities/organization_user.entity';
 
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
-    @InjectRepository(OrganizationUser)
-    private readonly organizationUserRepository: Repository<OrganizationUser>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -46,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     return {
       id: payload.sub,
       email: payload.email,
-      organization: payload.organization || undefined,
+      organizations: payload.organizations || [], // Ahora es un array de organizaciones
     };
   }
 }

@@ -12,6 +12,7 @@ import * as bcrypt from "bcrypt";
 import { Embed } from "../embedb/entities/embed.entity";
 import { OrganizationMemberDto } from "./dto/organization-member.dto";
 import { Role } from "./entities/enums";
+import { AuthService } from "src/modules/auth/auth.service"; // Importar AuthService
 
 @Injectable()
 export class OrganizationService {
@@ -28,7 +29,7 @@ export class OrganizationService {
         private readonly configService: ConfigService,
         @InjectRepository(Embed)
         private readonly embeRepository: Repository<Embed>,
-
+        private readonly authService: AuthService, // Inyectar AuthService
     ) { }
 
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
@@ -72,6 +73,35 @@ export class OrganizationService {
         const existingMember = await this.organizationUserRepository.findOne({
             where: { organization: { id: organizationId }, user: { id: user.id } },
         });
+
+        // Revisar si ya existe una relación para evitar duplicados
+        if (existingMember) {
+          throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        }
+
+        const newMember = this.organizationUserRepository.create({
+            organization,
+            user,
+            role: addMemberDto.role,
+        });
+        return this.organizationUserRepository.save(newMember);
+    }
+
+    async addMemberById(organizationId: string, userId: string, role: Role = Role.EDITOR): Promise<OrganizationUser> {
+        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
+        }
+
+        const user = await this.usersRepository.findOneBy({ id: userId });
+        if (!user) {
+            throw new NotFoundException(`Usuario con ID ${userId} no encontrado.`);
+        }
+
+        const existingMember = await this.organizationUserRepository.findOne({
+            where: { organization: { id: organizationId }, user: { id: user.id } },
+        });
+
         if (existingMember) {
             throw new BadRequestException('El usuario ya es miembro de esta organización.');
         }
@@ -79,7 +109,34 @@ export class OrganizationService {
         const newMember = this.organizationUserRepository.create({
             organization,
             user,
-            role: addMemberDto.role,
+            role,
+        });
+        return this.organizationUserRepository.save(newMember);
+    }
+
+    async addMemberByEmail(organizationId: string, email: string, role: Role = Role.EDITOR): Promise<OrganizationUser> {
+        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
+        }
+
+        const user = await this.usersRepository.findOneBy({ email });
+        if (!user) {
+            throw new NotFoundException(`Usuario con email ${email} no encontrado.`);
+        }
+
+        const existingMember = await this.organizationUserRepository.findOne({
+            where: { organization: { id: organizationId }, user: { id: user.id } },
+        });
+
+        if (existingMember) {
+            throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        }
+
+        const newMember = this.organizationUserRepository.create({
+            organization,
+            user,
+            role,
         });
         return this.organizationUserRepository.save(newMember);
     }
@@ -157,7 +214,7 @@ export class OrganizationService {
     async createOrganizationAndAssignUser(
         userId: string,
         createOrganizationDto: CreateOrganizationDto,
-    ): Promise<{ organization: { id: string, name: string, role: Role }; newAccessToken: string; newRefreshToken: string }> {
+    ): Promise<{ organizations: { id: string, name: string, role: Role }[]; newAccessToken: string; newRefreshToken: string }> {
         const user = await this.usersRepository.findOneBy({ id: userId });
         if (!user) {
             throw new NotFoundException('Usuario no encontrado.');
@@ -169,7 +226,6 @@ export class OrganizationService {
         if (existingOrgUser) {
             throw new BadRequestException('El usuario ya pertenece a una organización.');
         }
-
 
         const organization = this.organizationRepository.create({
             name: createOrganizationDto.name,
@@ -193,14 +249,21 @@ export class OrganizationService {
         organization.embed = embedb;
         await this.organizationRepository.save(organization);
 
-        const organizationPayload = { id: organization.id, name: organization.name, role: organizationUser.role };
-        const payload = { sub: user.id, email: user.email, organization: organizationPayload };
-
-        const newAccessToken = this.jwtService.sign(payload, {
-            secret: this.configService.get<string>('JWT_SECRET'),
-            expiresIn: '15m',
+        // Obtener todas las organizaciones del usuario para el token
+        const userOrganizations = await this.organizationUserRepository.find({
+            where: { user: { id: user.id } },
+            relations: ['organization'],
         });
 
+        const organizationsPayload = userOrganizations.map(ou => ({
+            id: ou.organization.id,
+            name: ou.organization.name,
+            role: ou.role,
+        }));
+
+        const newAccessToken = await this.authService.generateAccessTokenForUser(user);
+
+        const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
         const newRefreshToken = this.jwtService.sign(payload, {
             secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
             expiresIn: '7d',
@@ -223,6 +286,6 @@ export class OrganizationService {
         });
         await this.authTokenRepository.save(newTokenEntity);
 
-        return { organization: organizationPayload, newAccessToken, newRefreshToken };
+        return { organizations: organizationsPayload, newAccessToken, newRefreshToken };
     }
 }

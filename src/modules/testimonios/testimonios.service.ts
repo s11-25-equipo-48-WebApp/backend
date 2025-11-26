@@ -69,7 +69,6 @@ export class TestimoniosService {
             tags,
             media_url: dto.media_url ?? null,
             media_type: dto.media_type,
-            author: dto.author ?? null,
             author_id: user?.id ?? null,
             organization: organization, // Asociar el testimonio con la organización
         });

@@ -34,12 +34,16 @@ export class AuthService {
 
   // ====================
   // Registro de usuario
+  // Este método solo registra al usuario sin asignarlo a ninguna organización.
+  // La asignación a una organización se manejará por separado por el OrganizationService.
   // ====================
-  async register(registerUserDto: RegisterUserDto, organizationId?: string, role?: Role) {
+  async register(registerUserDto: RegisterUserDto): Promise<User> {
     const { email, password } = registerUserDto;
 
     const existingUser = await this.usersRepository.findOne({ where: { email } });
-    if (existingUser) throw new BadRequestException('El email ya está registrado');
+    if (existingUser) {
+      throw new BadRequestException('El email ya está registrado');
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -50,47 +54,37 @@ export class AuthService {
       name: email.split('@')[0],
     });
     await this.usersRepository.save(newUser);
+    return newUser;
+  }
 
-    //let assignedOrganizationId: string | null = null;
+  // ====================
+  // Generar Access Token para un usuario
+  // ====================
+  // ====================
+  // Generar Access Token para un usuario con todas sus organizaciones
+  // ====================
+  async generateAccessTokenForUser(user: User): Promise<string> {
+    const userOrganizations = await this.organizationUserRepository.find({
+      where: { user: { id: user.id } },
+      relations: ['organization'],
+    });
 
-    let orgPayload: { id: string; role: Role } | null = null;
-
-    if (organizationId) {
-      const organization = await this.organizationRepository.findOneBy({ id: organizationId });
-      if (!organization) throw new BadRequestException(`Organización con ID ${organizationId} no encontrada`);
-
-      const organizationUser = this.organizationUserRepository.create({
-        user: newUser,
-        organization: organization,
-        role: role || Role.EDITOR,
-      });
-
-      await this.organizationUserRepository.save(organizationUser);
-
-      orgPayload = {
-        id: organization.id,
-        role: organizationUser.role,
-      };
-    }
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
 
     const payload = {
-      sub: newUser.id,
-      email: newUser.email,
-      organization: orgPayload,
+      sub: user.id,
+      email: user.email,
+      organizations: organizationsPayload,
     };
 
-    const accessToken = this.jwtService.sign(payload, {
+    return this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
     });
-
-    return {
-      id: newUser.id,
-      accessToken,
-      estado: newUser.is_active ? 'activo' : 'pendiente',
-      createdAt: newUser.created_at,
-      organization: orgPayload,
-    };
   }
 
   // ====================
@@ -105,13 +99,17 @@ export class AuthService {
     const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
 
-    const loginOrgUserRelation = await this.organizationUserRepository.findOne({
+    // Obtener todas las organizaciones del usuario
+    const userOrganizations = await this.organizationUserRepository.find({
       where: { user: { id: user.id } },
       relations: ['organization'],
     });
 
-    const organizationId = loginOrgUserRelation?.organization?.id || null;
-    const organizationName = loginOrgUserRelation?.organization?.name || null;
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
 
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
@@ -122,11 +120,7 @@ export class AuthService {
       expires_at: LessThan(new Date()),
     });
 
-    const organization = await this.organizationRepository.findOneBy({ members: { user: { id: user.id } } });
-    const userRole = loginOrgUserRelation?.role || '';
-
-
-    const payload = { sub: user.id, email: user.email, organization: organizationId ? { id: organizationId, name: organizationName, role: userRole } : null };
+    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -156,7 +150,7 @@ export class AuthService {
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
-      organization: organizationId ? { id: organizationId, name: organizationName, role: userRole } : null,
+      organizations: organizationsPayload,
     };
   }
 
@@ -178,16 +172,19 @@ export class AuthService {
     tokenInDb.revoked = true;
     await this.authTokenRepository.save(tokenInDb);
 
-    const refreshOrgUserRelation = await this.organizationUserRepository.findOne({
+    // Obtener todas las organizaciones del usuario para el refresh token
+    const userOrganizations = await this.organizationUserRepository.find({
       where: { user: { id: user.id } },
       relations: ['organization'],
     });
-    const organizationId = refreshOrgUserRelation?.organization?.id || null;
-    const userRole = refreshOrgUserRelation?.role || '';
-    const organizationName = refreshOrgUserRelation?.organization?.name || null;
-    const organizationPayload = organizationId ? { id: organizationId, name: organizationName, role: userRole } : null;
 
-    const payload = { sub: user.id, email: user.email, organization: organizationPayload };
+    const organizationsPayload = userOrganizations.map(ou => ({
+      id: ou.organization.id,
+      name: ou.organization.name,
+      role: ou.role,
+    }));
+
+    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -215,7 +212,7 @@ export class AuthService {
       refreshToken: newRefreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
-      organization: organizationPayload,
+      organizations: organizationsPayload,
     };
   }
 
