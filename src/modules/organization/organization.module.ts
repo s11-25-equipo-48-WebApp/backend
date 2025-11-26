@@ -10,6 +10,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthModule } from "../auth/auth.module";
 import { User } from "../auth/entities/user.entity";
 import { AuthToken } from "../auth/entities/authToken.entity";
+import { Embed } from "../embedb/entities/embed.entity";
 
 @Module({
     imports: [
@@ -28,7 +29,8 @@ import { AuthToken } from "../auth/entities/authToken.entity";
             Organization, 
             OrganizationUser,
             User, 
-            AuthToken
+            AuthToken,
+            Embed
         ]),
         forwardRef(() => AuthModule),
     ],

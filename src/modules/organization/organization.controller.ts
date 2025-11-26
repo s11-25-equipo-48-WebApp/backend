@@ -7,12 +7,13 @@ import { Roles } from "src/common/decorators/roles.decorator";
 import { Role } from "../auth/entities/enums";
 import { AddOrganizationMemberDto, UpdateOrganizationDto, UpdateOrganizationMemberRoleDto, CreateOrganizationDto } from "./dto/organization.dto";
 import { CreateOrganizationMemberDto } from "./dto/create-organization-member.dto"; // Importar el nuevo DTO
+import { OrganizationMemberDto } from "./dto/organization-member.dto"; // Importar OrganizationMemberDto
 import { AuthService } from "src/modules/auth/auth.service";
 import type { Response } from 'express';
 import { ConfigService } from "@nestjs/config";
 
 
-@ApiTags('organization')
+@ApiTags('Organization')
 @Controller('organization')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('access-token')
@@ -49,13 +50,12 @@ export class OrganizationController {
     if (!user || !user.id) {
       throw new UnauthorizedException('Usuario no autenticado.');
     }
-    if (user.organizationId) {
+    if (user.organization?.id) {
       throw new BadRequestException('El usuario ya pertenece a una organización.');
     }
 
     const { organization, newAccessToken, newRefreshToken } = await this.organizationService.createOrganizationAndAssignUser(
       user.id,
-      user.role,
       createOrganizationDto,
     );
 
@@ -70,7 +70,7 @@ export class OrganizationController {
       message: 'Organización creada y asignada exitosamente.',
       organizationId: organization.id,
       accessToken: newAccessToken,
-      userRole: user.role,
+      userRole: organization.role,
     };
   }
 
@@ -80,10 +80,10 @@ export class OrganizationController {
   @ApiOkResponse({ description: 'Detalles de la organización' })
   async getOrganizationDetails(@Req() req) {
     const user = req.user;
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
     }
-    return this.organizationService.getOrganizationDetails(user.organizationId);
+    return this.organizationService.getOrganizationDetails(user.organization.id);
   }
 
   @Patch()
@@ -104,10 +104,10 @@ export class OrganizationController {
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
     }
-    return this.organizationService.updateOrganization(user.organizationId, updateDto);
+    return this.organizationService.updateOrganization(user.organization.id, updateDto);
   }
 
   @Delete()
@@ -116,10 +116,10 @@ export class OrganizationController {
   @ApiOkResponse({ description: 'Organización eliminada' })
   async deleteOrganization(@Req() req) {
     const user = req.user;
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
     }
-    await this.organizationService.deleteOrganization(user.organizationId);
+    await this.organizationService.deleteOrganization(user.organization.id);
     return { message: 'Organización eliminada exitosamente' };
   }
 
@@ -145,15 +145,15 @@ export class OrganizationController {
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    if (!user || !user.organization?.id || !user.organization?.role) {
+      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
     }
     // Solo permitir añadir roles de EDITOR o ADMIN para usuarios normales
-    if (user.role === Role.ADMIN && (addMemberDto.role === Role.SUPERADMIN)) {
+    if (user.organization.role === Role.ADMIN && (addMemberDto.role === Role.SUPERADMIN)) {
       throw new UnauthorizedException('Un administrador no puede agregar miembros con rol SUPERADMIN.');
     }
-    Logger.log(`addMember: userId: ${user.id}, organizationId: ${user.organizationId}`);
-    return this.organizationService.addMember(user.organizationId, addMemberDto);
+    Logger.log(`addMember: userId: ${user.id}, organizationId: ${user.organization.id}`);
+    return this.organizationService.addMember(user.organization.id, addMemberDto);
   }
 
   @Delete('members/:userId')
@@ -165,14 +165,14 @@ export class OrganizationController {
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    if (!user || !user.organization?.id || !user.organization?.role) {
+      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
     }
     // Un administrador no puede eliminarse a sí mismo ni a otros administradores o superadministradores
-    if (user.role === Role.ADMIN && (user.id === userId || (await this.organizationService.getOrganizationDetails(user.organizationId)).members.some(m => m.user.id === userId && (m.role === Role.ADMIN || m.role === Role.SUPERADMIN)))) {
+    if (user.organization.role === Role.ADMIN && (user.id === userId || (await this.organizationService.getOrganizationDetails(user.organization.id)).members.some(m => m.user.id === userId && (m.role === Role.ADMIN || m.role === Role.SUPERADMIN)))) {
       throw new UnauthorizedException('Un administrador no puede eliminar a otros administradores o superadministradores, ni eliminarse a sí mismo.');
     }
-    await this.organizationService.removeMember(user.organizationId, userId);
+    await this.organizationService.removeMember(user.organization.id, userId);
     return { message: 'Miembro eliminado exitosamente' };
   }
 
@@ -199,12 +199,12 @@ export class OrganizationController {
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    if (!user || !user.organization?.id || !user.organization?.role) {
+      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
     }
     // Un administrador no puede cambiar el rol de un superadministrador ni a sí mismo a un rol inferior
-    if (user.role === Role.ADMIN) {
-      const targetMember = await this.organizationService.getOrganizationDetails(user.organizationId).then(org => org.members.find(m => m.user.id === userId));
+    if (user.organization.role === Role.ADMIN) {
+      const targetMember = await this.organizationService.getOrganizationDetails(user.organization.id).then(org => org.members.find(m => m.user.id === userId));
       if (targetMember && targetMember.role === Role.SUPERADMIN) {
         throw new UnauthorizedException('Un administrador no puede cambiar el rol de un SUPERADMIN.');
       }
@@ -218,7 +218,7 @@ export class OrganizationController {
         throw new UnauthorizedException('Un administrador no puede asignar el rol SUPERADMIN.');
       }
     }
-    return this.organizationService.updateMemberRole(user.organizationId, userId, updateRoleDto);
+    return this.organizationService.updateMemberRole(user.organization.id, userId, updateRoleDto);
   }
 
   @Post('members/register')
@@ -241,12 +241,12 @@ export class OrganizationController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
-      throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
+    if (!user || !user.organization?.id || !user.organization?.role) {
+      throw new UnauthorizedException('No se encontró la información de la organización en el token.');
     }
 
     // Un administrador no puede registrar miembros con rol SUPERADMIN
-    if (user.role === Role.ADMIN && createMemberDto.role === Role.SUPERADMIN) {
+    if (user.organization.role === Role.ADMIN && createMemberDto.role === Role.SUPERADMIN) {
       throw new UnauthorizedException('Un administrador no puede registrar miembros con rol SUPERADMIN.');
     }
 
@@ -254,7 +254,7 @@ export class OrganizationController {
 
     if (existingUser) {
       // Si el usuario ya existe, intentar añadirlo a la organización
-      const organizationDetails = await this.organizationService.getOrganizationDetails(user.organizationId);
+      const organizationDetails = await this.organizationService.getOrganizationDetails(user.organization.id);
       const alreadyMember = organizationDetails.members.some(
         (member) => member.user.id === existingUser.id,
       );
@@ -267,20 +267,20 @@ export class OrganizationController {
         email: createMemberDto.email,
         role: createMemberDto.role || Role.EDITOR,
       };
-      await this.organizationService.addMember(user.organizationId, addMemberDto);
+      await this.organizationService.addMember(user.organization.id, addMemberDto);
 
       return {
         message: `Usuario ${existingUser.email} agregado a la organización exitosamente con rol ${addMemberDto.role}.`,
         id: existingUser.id,
         email: existingUser.email,
-        organizationId: user.organizationId,
+        organizationId: user.organization.id,
         role: addMemberDto.role,
       };
     } else {
       // Si el usuario no existe, registrarlo y asignarlo a la organización
       const { id, accessToken, estado, createdAt, organization } = await this.authService.register(
         createMemberDto,
-        user.organizationId,
+        user.organization.id,
         createMemberDto.role || Role.EDITOR, // Por defecto asignamos EDITOR si no se especifica
       );
 
@@ -301,32 +301,17 @@ export class OrganizationController {
   @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid)' })
   @ApiOkResponse({
     description: 'Detalles del miembro de la organización',
+    type: OrganizationMemberDto, // Usar el DTO directamente
     schema: {
       example: {
-        id: 'uuid-organization-user',
-        role: 'editor',
+        id: 'uuid-user',
+        email: 'editor@example.com',
+        name: 'editor',
+        bio: 'Breve biografía del editor',
+        avatarUrl: 'http://example.com/avatar.jpg',
+        role: 'EDITOR',
         is_active: true,
         createdAt: '2025-11-26T01:00:00.000Z',
-        user: {
-          id: 'uuid-user',
-          email: 'editor@example.com',
-          name: 'editor',
-          role: 'editor',
-          is_active: true,
-          created_at: '2025-11-26T01:00:00.000Z',
-          updated_at: '2025-11-26T01:00:00.000Z',
-          profile: {
-            id: 'uuid-profile', // Corregido: cerrar la cadena
-            firstName: 'Editor',
-            lastName: 'Example',
-            // ... otras propiedades del perfil
-          },
-        },
-        organization: {
-          id: 'uuid-organization',
-          name: 'Mi Organización',
-          // ... otras propiedades de la organización
-        },
       },
     },
   })
@@ -335,23 +320,50 @@ export class OrganizationController {
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
     }
-    return this.organizationService.getOrganizationMemberDetails(user.organizationId, userId);
+    return this.organizationService.getOrganizationMemberDetails(user.organization.id, userId);
   }
 
   @Get('members')
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Obtener todos los miembros de la organización del token' })
-  @ApiOkResponse({ description: 'Lista de miembros de la organización' })
+  @ApiOkResponse({ 
+    description: 'Lista de miembros de la organización',
+    type: [OrganizationMemberDto], // Indicar que devuelve un array del DTO
+    schema: {
+      example: [
+        {
+          id: 'uuid-user-1',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          bio: 'Breve biografía del administrador',
+          avatarUrl: 'http://example.com/avatar-admin.jpg',
+          role: 'ADMIN',
+          is_active: true,
+          createdAt: '2025-11-26T01:00:00.000Z',
+        },
+        {
+          id: 'uuid-user-2',
+          email: 'editor@example.com',
+          name: 'Editor User',
+          bio: 'Breve biografía del editor',
+          avatarUrl: 'http://example.com/avatar-editor.jpg',
+          role: 'EDITOR',
+          is_active: true,
+          createdAt: '2025-11-26T01:00:00.000Z',
+        },
+      ],
+    },
+  })
   async getOrganizationMembers(
     @Req() req,
   ) {
     const user = req.user;
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('No se encontró el ID de la organización en el token.');
     }
-    return this.organizationService.getOrganizationMembers(user.organizationId);
+    return this.organizationService.getOrganizationMembers(user.organization.id);
   }
 }

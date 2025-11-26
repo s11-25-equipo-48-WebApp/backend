@@ -12,7 +12,7 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
-import { Status } from '../auth/entities/enums';
+import { Role, Status } from '../auth/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
 
@@ -33,13 +33,13 @@ export class TestimoniosService {
      * Estado inicial: 'pending'.
      */
     async create(dto: CreateTestimonioDto, user?: RequestWithUser['user']): Promise<Testimonio> {
-        if (!user || !user.organizationId) {
+        if (!user || !user.organization?.id) {
             throw new UnauthorizedException('Se requiere una organización para crear testimonios.');
         }
 
-        const organization = await this.organizationRepo.findOneBy({ id: user.organizationId });
+        const organization = await this.organizationRepo.findOneBy({ id: user.organization.id });
         if (!organization) {
-            throw new BadRequestException(`Organización con ID ${user.organizationId} no encontrada.`);
+            throw new BadRequestException(`Organización con ID ${user.organization.id} no encontrada.`);
         }
 
         // validar/obtener categoría
@@ -69,7 +69,7 @@ export class TestimoniosService {
         });
 
         // Lógica para determinar el estado inicial del testimonio
-        const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'superadmin';
+        const isAdminOrSuperAdmin = user?.organization?.role === Role.ADMIN || user?.organization?.role === Role.SUPERADMIN;
         entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
 
         // Si se aprueba automáticamente, establecer approved_by y approved_at
@@ -94,11 +94,11 @@ export class TestimoniosService {
     ): Promise<Testimonio> {
 
         // Buscar testimonio y validar organización
-        if (!user || !user.organizationId) {
+        if (!user || !user.organization?.id) {
             throw new UnauthorizedException('Se requiere una organización para editar testimonios.');
         }
 
-        const existing = await this.repo.findOneById(id, user.organizationId);
+        const existing = await this.repo.findOneById(id, user.organization.id);
         if (!existing) {
             throw new NotFoundException(`Testimonio con ID ${id} no encontrado en su organización.`);
         }
@@ -108,7 +108,7 @@ export class TestimoniosService {
             throw new ForbiddenException('Authentication required to edit testimonio');
         }
 
-        const isAdmin = user.role === 'admin' || user.role === 'superadmin'; // Incluir superadmin
+        const isAdmin = user.organization?.role === Role.ADMIN || user.organization?.role === Role.SUPERADMIN; // Incluir superadmin
         const isAuthor = existing.author_id === user.id;
 
         // Permisos: autor, admin o superadmin
@@ -197,10 +197,10 @@ export class TestimoniosService {
         user: RequestWithUser['user'],
     ): Promise<Testimonio> {
         // buscar testimonio
-        if (!user || !user.organizationId) {
+        if (!user || !user.organization?.id) {
             throw new UnauthorizedException('Se requiere una organización para cambiar el estado del testimonio.');
         }
-        const existing = await this.repo.findOneById(id, user.organizationId);
+        const existing = await this.repo.findOneById(id, user.organization.id);
         if (!existing) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
@@ -211,8 +211,8 @@ export class TestimoniosService {
         }
 
         // validar rol
-        const role = user.role as string;
-        const isAdmin = role === 'admin'
+        const userOrganizationRole = user.organization.role;
+        const isAdmin = userOrganizationRole === Role.ADMIN;
 
         if (!isAdmin) {
             throw new ForbiddenException('Solo un administrador puede cambiar el estado');
@@ -331,10 +331,10 @@ export class TestimoniosService {
     */
     async softDelete(id: string, user: RequestWithUser['user']): Promise<{ id: string; deleted_at: Date }> {
         //  buscar (ya excluye borrados)
-        if (!user || !user.organizationId) {
+        if (!user || !user.organization?.id) {
             throw new UnauthorizedException('Se requiere una organización para eliminar testimonios.');
         }
-        const existing = await this.repo.findOneById(id, user.organizationId);
+        const existing = await this.repo.findOneById(id, user.organization.id);
         if (!existing) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
@@ -345,8 +345,8 @@ export class TestimoniosService {
         }
 
         // sólo admin puede eliminar (según criterio)
-        const role = user.role as string;
-        const isAdmin = role === 'admin'
+        const userOrganizationRole = user.organization.role;
+        const isAdmin = userOrganizationRole === Role.ADMIN;
         if (!isAdmin) {
             throw new ForbiddenException('Solo administradores pueden eliminar testimonios');
         }

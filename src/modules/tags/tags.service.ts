@@ -17,16 +17,16 @@ export class TagsService {
   ){}
 
   async create(dto: CreateTagDto, user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para crear tags.');
     }
 
-    const organization = await this.organizationRepo.findOneBy({ id: user.organizationId });
+    const organization = await this.organizationRepo.findOneBy({ id: user.organization.id });
     if (!organization) {
-      throw new BadRequestException(`Organización con ID ${user.organizationId} no encontrada.`);
+      throw new BadRequestException(`Organización con ID ${user.organization.id} no encontrada.`);
     }
 
-    const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organizationId } } });
+    const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organization.id } } });
     if (exists) throw new BadRequestException('Tag already exists in this organization');
 
     const slug = dto.name.toLowerCase().replace(/\s+/g, '-');
@@ -42,32 +42,32 @@ export class TagsService {
   }
 
   async findAll(user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para listar tags.');
     }
     return this.repo.find({
-      where: { organization: { id: user.organizationId } },
+      where: { organization: { id: user.organization.id } },
       order: { name: 'ASC' }
     });
   }
 
   async findOne(id: string, user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para ver este tag.');
     }
-    const tag = await this.repo.findOne({ where: { id, organization: { id: user.organizationId } } });
+    const tag = await this.repo.findOne({ where: { id, organization: { id: user.organization.id } } });
     if (!tag) throw new NotFoundException('Tag not found in your organization');
     return tag;
   }
 
   async update(id: string, dto: UpdateTagDto, user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para actualizar tags.');
     }
     const tag = await this.findOne(id, user); // findOne ya valida la organización
 
     if (dto.name) {
-      const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organizationId } } });
+      const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organization.id } } });
       if (exists && exists.id !== id)
         throw new BadRequestException('Name already in use in this organization');
 
@@ -81,7 +81,7 @@ export class TagsService {
   }
 
   async delete(id: string, user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para eliminar tags.');
     }
     const tag = await this.findOne(id, user); // findOne ya valida la organización

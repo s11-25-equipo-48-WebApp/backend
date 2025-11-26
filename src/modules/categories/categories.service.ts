@@ -25,17 +25,17 @@ export class CategoriesService {
   ) {}
 
   async create(dto: CreateCategoryDto, user: RequestWithUser['user']): Promise<Category> {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para crear categorías.');
     }
 
-    const organization = await this.organizationRepo.findOneBy({ id: user.organizationId });
+    const organization = await this.organizationRepo.findOneBy({ id: user.organization.id });
     if (!organization) {
-      throw new BadRequestException(`Organización con ID ${user.organizationId} no encontrada.`);
+      throw new BadRequestException(`Organización con ID ${user.organization.id} no encontrada.`);
     }
 
     // unicidad dentro de la organización
-    const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organizationId } } });
+    const exists = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organization.id } } });
     if (exists) {
       throw new BadRequestException(`Category with name "${dto.name}" already exists in this organization`);
     }
@@ -49,15 +49,15 @@ export class CategoriesService {
   }
 
   async update(id: string, dto: UpdateCategoryDto, user: RequestWithUser['user']): Promise<Category> {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para actualizar categorías.');
     }
 
-    const entity = await this.repo.findOne({ where: { id, organization: { id: user.organizationId } } });
+    const entity = await this.repo.findOne({ where: { id, organization: { id: user.organization.id } } });
     if (!entity) throw new NotFoundException(`Category with id ${id} not found in your organization`);
 
     if (dto.name && dto.name !== entity.name) {
-      const other = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organizationId } } });
+      const other = await this.repo.findOne({ where: { name: dto.name, organization: { id: user.organization.id } } });
       if (other && other.id !== id) {
         throw new BadRequestException(`Category with name "${dto.name}" already exists in this organization`);
       }
@@ -73,16 +73,16 @@ export class CategoriesService {
    * - Si se pasa reassignTo (id de otra categoría), reasigna testimonios y luego elimina.
    */
   async delete(id: string, user: RequestWithUser['user'], reassignTo?: string) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para eliminar categorías.');
     }
 
-    const category = await this.repo.findOne({ where: { id, organization: { id: user.organizationId } } });
+    const category = await this.repo.findOne({ where: { id, organization: { id: user.organization.id } } });
     if (!category) throw new NotFoundException('Category not found in your organization');
 
     // contar testimonios asociados
     const testimonios = await this.testimonioRepo.count({
-      where: { category: { id }, organization: { id: user.organizationId } },
+      where: { category: { id }, organization: { id: user.organization.id } },
     });
 
     if (testimonios > 0) {
@@ -92,25 +92,25 @@ export class CategoriesService {
         );
       }
 
-      const dest = await this.repo.findOne({ where: { id: reassignTo, organization: { id: user.organizationId } } });
+      const dest = await this.repo.findOne({ where: { id: reassignTo, organization: { id: user.organization.id } } });
       if (!dest) throw new NotFoundException('Destination category not found in your organization');
 
       await this.testimonioRepo.update(
-        { category: { id }, organization: { id: user.organizationId } },
+        { category: { id }, organization: { id: user.organization.id } },
         { category: dest },
       );
     }
 
-    await this.repo.delete({ id, organization: { id: user.organizationId } });
+    await this.repo.delete({ id, organization: { id: user.organization.id } });
     return { id };
   }
 
   async findAll(user: RequestWithUser['user']) {
-    if (!user || !user.organizationId) {
+    if (!user || !user.organization?.id) {
       throw new UnauthorizedException('Se requiere una organización para listar categorías.');
     }
     return this.repo.find({
-      where: { organization: { id: user.organizationId } },
+      where: { organization: { id: user.organization.id } },
       order: { name: 'ASC' },
     });
   }

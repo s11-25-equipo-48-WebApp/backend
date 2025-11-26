@@ -5,7 +5,10 @@ export interface RequestWithUser extends Request {
     user: {
         id: string;
         email: string;
-        role: Role;
-        organizationId?: string; // Propiedad organizationId agregada
+        organization?: {
+            id: string;
+            name?: string;
+            role: Role;
+        };
     };
 }

@@ -43,24 +43,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     console.log(`[JwtStrategy] Token válido para usuario ${payload.sub}`);
 
-    let organizationRole: Role | undefined;
-    if (payload.organizationId) {
-      const organizationUser = await this.organizationUserRepository.findOne({
-        where: {
-          user: { id: payload.sub },
-          organization: { id: payload.organizationId },
-        },
-      });
-      organizationRole = organizationUser?.role;
-    }
 
     return {
       id: payload.sub,
       email: payload.email,
-      organization: payload.organization ? {
-        id: payload.organization.id,
-        role: payload.organization.role
-      } : undefined
+      organization: payload.organization || undefined,
     };
   }
 }
