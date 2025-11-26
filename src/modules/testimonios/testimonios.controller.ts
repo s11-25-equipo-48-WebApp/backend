@@ -72,7 +72,6 @@ export class TestimoniosController {
     @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
     createTestimonioDto: CreateTestimonioDto,
-    @Req() req: RequestWithUser,
   ) {
     const created = await this.testimoniosService.create(createTestimonioDto, req.user, organizationId); // Pasar organizationId al servicio
 

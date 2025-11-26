@@ -27,7 +27,7 @@ async function bootstrap() {
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    //credentials: true,
   });
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
