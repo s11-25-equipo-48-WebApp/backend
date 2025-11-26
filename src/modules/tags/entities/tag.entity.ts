@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, Unique, ManyToOne, JoinColumn } from 'typeorm';
 import { Testimonio } from '../../testimonios/entities/testimonio.entity';
+import { Organization } from 'src/modules/organization/entities/organization.entity';
 
 @Entity('tags')
-@Unique(['name'])
+@Unique(['name', 'organization'])
 export class Tag {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -15,6 +16,10 @@ export class Tag {
 
   @Column({ type: 'text', nullable: true })
   description: string | null;
+
+  @ManyToOne(() => Organization, (org) => org.tags, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @ManyToMany(() => Testimonio, (t) => t.tags)
   testimonios: Testimonio[];

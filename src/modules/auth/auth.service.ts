@@ -34,7 +34,7 @@ export class AuthService {
   // ====================
   // Registro de usuario
   // ====================
-  async register(registerUserDto: RegisterUserDto) {
+  async register(registerUserDto: RegisterUserDto, organizationId?: string, role?: Role) {
     const { email, password } = registerUserDto;
 
     const existingUser = await this.usersRepository.findOne({ where: { email } });
@@ -46,28 +46,28 @@ export class AuthService {
       email,
       password_hash: hashedPassword,
       is_active: true,
-      role: Role.ADMIN,
+      role: role || Role.ADMIN, // Usar el rol proporcionado, o ADMIN por defecto
       name: email.split('@')[0],
     });
     await this.usersRepository.save(newUser);
 
-    // 2. Crear organización automáticamente
-    const newOrg = this.organizationRepository.create({
-      name: `${newUser.name}-organization`
-    });
-    await this.organizationRepository.save(newOrg); // Guardar la organización antes de usarla en la relación
+    let assignedOrganizationId: string | null = null; // Corregir el tipo aquí
+    if (organizationId) {
+        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new BadRequestException(`Organización con ID ${organizationId} no encontrada.`);
+        }
+        
+        const organizationUser = this.organizationUserRepository.create({
+            user: newUser,
+            organization: organization,
+            role: role || Role.EDITOR, // Rol del usuario en la organización
+        });
+        await this.organizationUserRepository.save(organizationUser);
+        assignedOrganizationId = organization.id;
+    }
 
-    // 3. Insertar relación en organization_users
-    const newOrgUserRelation = this.organizationUserRepository.create({
-      user: newUser,
-      organization: newOrg,
-      role: newUser.role, // O el rol por defecto para un nuevo usuario en la organización
-    });
-    await this.organizationUserRepository.save(newOrgUserRelation);
-
-    const organizationId = newOrgUserRelation?.organization?.id || null;
-
-    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role, organizationId };
+    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role, organizationId: assignedOrganizationId };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -79,6 +79,8 @@ export class AuthService {
       accessToken,
       estado: newUser.is_active ? 'activo' : 'pendiente',
       createdAt: newUser.created_at,
+      organizationId: assignedOrganizationId,
+      role: newUser.role,
     };
   }
 
@@ -142,7 +144,12 @@ export class AuthService {
       refreshToken,
       estado: user.is_active ? 'activo' : 'pendiente',
       createdAt: user.created_at,
+      organizationId: organizationId, // Corregido: usar el organizationId ya resuelto
     };
+  }
+
+  async findUserByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
   }
 
   // ====================

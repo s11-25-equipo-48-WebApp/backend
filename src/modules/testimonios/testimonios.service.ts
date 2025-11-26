@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { In, Repository } from 'typeorm';
 import { TestimonioRepository } from './repository/testimonio.repository';
@@ -13,6 +13,8 @@ import { GetTestimoniosQueryDto } from './dto/get-testimonios-query.dto';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Tag } from 'src/modules/tags/entities/tag.entity';
 import { Status } from '../auth/entities/enums';
+import { Organization } from 'src/modules/organization/entities/organization.entity';
+import { OrganizationUser } from '../organization/entities/organization_user.entity';
 
 @Injectable()
 export class TestimoniosService {
@@ -22,6 +24,8 @@ export class TestimoniosService {
         private readonly auditRepo: Repository<AuditLog>,
         @InjectRepository(Category) private readonly categoryRepo: Repository<Category>,
         @InjectRepository(Tag) private readonly tagRepo: Repository<Tag>,
+        @InjectRepository(Organization) private readonly organizationRepo: Repository<Organization>,
+        @InjectRepository(OrganizationUser) private readonly organizationUserRepo: Repository<OrganizationUser>,
     ) { }
 
     /**
@@ -29,6 +33,15 @@ export class TestimoniosService {
      * Estado inicial: 'pending'.
      */
     async create(dto: CreateTestimonioDto, user?: RequestWithUser['user']): Promise<Testimonio> {
+        if (!user || !user.organizationId) {
+            throw new UnauthorizedException('Se requiere una organización para crear testimonios.');
+        }
+
+        const organization = await this.organizationRepo.findOneBy({ id: user.organizationId });
+        if (!organization) {
+            throw new BadRequestException(`Organización con ID ${user.organizationId} no encontrada.`);
+        }
+
         // validar/obtener categoría
         const category = await this.categoryRepo.findOne({ where: { id: dto.category_id } });
         if (!category) throw new BadRequestException(`Category ${dto.category_id} not found`);
@@ -52,8 +65,18 @@ export class TestimoniosService {
             media_type: dto.media_type,
             author: dto.author ?? null,
             author_id: user?.id ?? null,
-            status: Status.PENDIENTE,
+            organization: organization, // Asociar el testimonio con la organización
         });
+
+        // Lógica para determinar el estado inicial del testimonio
+        const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'superadmin';
+        entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
+
+        // Si se aprueba automáticamente, establecer approved_by y approved_at
+        if (entity.status === Status.APROBADO) {
+            entity.approved_by = user.id;
+            entity.approved_at = new Date();
+        }
 
         return this.repo.save(entity);
     }
@@ -70,10 +93,14 @@ export class TestimoniosService {
         user: RequestWithUser['user'],
     ): Promise<Testimonio> {
 
-        // Buscar testimonio
-        const existing = await this.repo.findOneById(id);
+        // Buscar testimonio y validar organización
+        if (!user || !user.organizationId) {
+            throw new UnauthorizedException('Se requiere una organización para editar testimonios.');
+        }
+
+        const existing = await this.repo.findOneById(id, user.organizationId);
         if (!existing) {
-            throw new NotFoundException(`Testimonio with id ${id} not found`);
+            throw new NotFoundException(`Testimonio con ID ${id} no encontrado en su organización.`);
         }
 
         // Validar usuario presente
@@ -81,13 +108,13 @@ export class TestimoniosService {
             throw new ForbiddenException('Authentication required to edit testimonio');
         }
 
-        const isAdmin = user.role === 'admin';
+        const isAdmin = user.role === 'admin' || user.role === 'superadmin'; // Incluir superadmin
         const isAuthor = existing.author_id === user.id;
 
-        // Permisos: autor o admin
+        // Permisos: autor, admin o superadmin
         if (!isAdmin && !isAuthor) {
             throw new ForbiddenException(
-                'Only the author or an admin can edit this testimonio',
+                'Only the author, an admin or superadmin can edit this testimonio',
             );
         }
 
@@ -170,9 +197,12 @@ export class TestimoniosService {
         user: RequestWithUser['user'],
     ): Promise<Testimonio> {
         // buscar testimonio
-        const existing = await this.repo.findOneById(id);
+        if (!user || !user.organizationId) {
+            throw new UnauthorizedException('Se requiere una organización para cambiar el estado del testimonio.');
+        }
+        const existing = await this.repo.findOneById(id, user.organizationId);
         if (!existing) {
-            throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+            throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
 
         // validar usuario
@@ -301,9 +331,12 @@ export class TestimoniosService {
     */
     async softDelete(id: string, user: RequestWithUser['user']): Promise<{ id: string; deleted_at: Date }> {
         //  buscar (ya excluye borrados)
-        const existing = await this.repo.findOneById(id);
+        if (!user || !user.organizationId) {
+            throw new UnauthorizedException('Se requiere una organización para eliminar testimonios.');
+        }
+        const existing = await this.repo.findOneById(id, user.organizationId);
         if (!existing) {
-            throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+            throw new NotFoundException(`Testimonio con id ${id} no encontrado en su organización.`);
         }
 
         // validar usuario
@@ -358,6 +391,7 @@ export class TestimoniosService {
         const [items, total] = await this.repo.findPublicWithFilters({
             category_id: query.category_id,
             tag_id: query.tag_id,
+            organization_id: query.organization_id, // Pasar organization_id desde la consulta
             page,
             limit,
         });

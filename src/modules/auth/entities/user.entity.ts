@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Exclude } from 'class-transformer';
 import { Role } from "./enums";
 import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity";
 import { UserProfile } from "./userProfile.entity";
@@ -14,6 +15,7 @@ export class User {
   @Column({ unique: true, type: 'varchar' })
   email!: string;
 
+  @Exclude()
   @Column({ type: 'varchar' })
   password_hash!: string;
 
