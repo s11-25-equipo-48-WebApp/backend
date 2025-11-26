@@ -229,8 +229,12 @@ export class OrganizationController {
     type: CreateOrganizationMemberDto,
     examples: {
       a: {
-        summary: 'Ejemplo de registro y asignación de un editor',
-        value: { email: 'editor@example.com', password: 'password123', role: Role.EDITOR },
+        summary: 'Ejemplo de agregar un miembro existente con rol EDITOR (sin password)',
+        value: { email: 'existente@example.com', role: Role.EDITOR },
+      },
+      b: {
+        summary: 'Ejemplo de registro de un nuevo miembro con rol EDITOR (con password)',
+        value: { email: 'nuevo@example.com', password: 'password123', role: Role.EDITOR },
       },
     },
   })
@@ -278,8 +282,13 @@ export class OrganizationController {
       };
     } else {
       // Si el usuario no existe, registrarlo y asignarlo a la organización
+      // Si no se proporciona contraseña, no se puede registrar un nuevo usuario
+      if (!createMemberDto.password) {
+        throw new BadRequestException('Se requiere una contraseña para registrar un nuevo usuario.');
+      }
+
       const { id, accessToken, estado, createdAt, organization } = await this.authService.register(
-        createMemberDto,
+        { email: createMemberDto.email, password: createMemberDto.password }, // Asegurarse de pasar la contraseña
         user.organization.id,
         createMemberDto.role || Role.EDITOR, // Por defecto asignamos EDITOR si no se especifica
       );

@@ -34,6 +34,7 @@ export class OrganizationService {
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: organizationId },
+            relations: ['members', 'members.user'], // Cargar la relación 'members' y 'members.user'
         });
         if (!organization) {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
