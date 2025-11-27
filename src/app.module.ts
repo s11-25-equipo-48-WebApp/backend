@@ -8,7 +8,6 @@ import { APP_FILTER } from "@nestjs/core";
 import { AllExceptionsFilter } from "./common/filters/http-exception.filter";
 import { LoggerModule } from "./infra/Logger/logger.module";
 import { TypeOrmConfigService } from "./config/typeorm.config";
-import { TestingModule } from "./testing/testing.module";
 import { TestimoniosModule } from './modules/testimonios/testimonios.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { TagsModule } from './modules/tags/tags.module';
@@ -25,7 +24,6 @@ import { OrganizationModule } from "./modules/organization/organization.module";
     }),
     LoggerModule,
     AuthModule,
-    TestingModule,
     TestimoniosModule,
     CategoriesModule,
     TagsModule,

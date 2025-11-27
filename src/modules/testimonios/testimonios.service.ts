@@ -15,8 +15,7 @@ import { Tag } from 'src/modules/tags/entities/tag.entity';
 //import { Role, Status } from '../auth/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
-import { Role } from 'src/testing/entities/enums';
-import { Status } from '../organization/entities/enums';
+import { Role, Status } from '../organization/entities/enums';
 
 @Injectable()
 export class TestimoniosService {
