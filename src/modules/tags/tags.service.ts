@@ -17,7 +17,8 @@ export class TagsService {
   ){}
 
   async create(dto: CreateTagDto, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para crear tags en esta organización.');
     }
 
@@ -42,7 +43,8 @@ export class TagsService {
   }
 
   async findAll(user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para listar tags de esta organización.');
     }
     return this.repo.find({
@@ -52,7 +54,8 @@ export class TagsService {
   }
 
   async findOne(id: string, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para ver este tag en esta organización.');
     }
     const tag = await this.repo.findOne({ where: { id, organization: { id: organizationId } } });
@@ -61,7 +64,8 @@ export class TagsService {
   }
 
   async update(id: string, dto: UpdateTagDto, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para actualizar tags en esta organización.');
     }
     const tag = await this.findOne(id, user, organizationId); // findOne ya valida la organización
@@ -81,7 +85,8 @@ export class TagsService {
   }
 
   async delete(id: string, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para eliminar tags en esta organización.');
     }
     const tag = await this.findOne(id, user, organizationId); // findOne ahora valida la organización con organizationId

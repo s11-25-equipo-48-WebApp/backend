@@ -11,8 +11,10 @@ import { AuthToken } from "../auth/entities/authToken.entity";
 import * as bcrypt from "bcrypt";
 import { Embed } from "../embedb/entities/embed.entity";
 import { OrganizationMemberDto } from "./dto/organization-member.dto";
-import { Role } from "./entities/enums";
+import { Role, Status } from "./entities/enums"; // Importar Status
 import { AuthService } from "src/modules/auth/auth.service"; // Importar AuthService
+import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity"; // Importar Testimonio
+import { Category } from "src/modules/categories/entities/category.entity"; // Importar Category
 
 @Injectable()
 export class OrganizationService {
@@ -29,17 +31,33 @@ export class OrganizationService {
         private readonly configService: ConfigService,
         @InjectRepository(Embed)
         private readonly embeRepository: Repository<Embed>,
+        @InjectRepository(Testimonio)
+        private readonly testimoniosRepository: Repository<Testimonio>, // Inyectar TestimonioRepository
+        @InjectRepository(Category)
+        private readonly categoryRepository: Repository<Category>, // Inyectar CategoryRepository
         private readonly authService: AuthService, // Inyectar AuthService
     ) { }
 
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: organizationId },
-            relations: ['members', 'members.user'], // Cargar la relación 'members' y 'members.user'
+            // Ya no cargamos la relación 'members' aquí
         });
+
         if (!organization) {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
         }
+
+        const approvedTestimonios = await this.testimoniosRepository.find({
+            where: {
+                organization: { id: organizationId },
+                status: Status.APROBADO,
+            },
+            relations: ['category', 'tags', 'author'],
+        });
+
+        organization.testimonios = approvedTestimonios;
+
         return organization;
     }
 
@@ -232,6 +250,13 @@ export class OrganizationService {
         });
         await this.organizationRepository.save(organization);
 
+        // Crear categorías por defecto
+        const defaultCategories = ['producto', 'evento', 'cliente', 'industria'];
+        const categoriesToCreate = defaultCategories.map(name =>
+            this.categoryRepository.create({ name, organization }),
+        );
+        await this.categoryRepository.save(categoriesToCreate);
+
         const organizationUser = this.organizationUserRepository.create({
             user: user,
             organization: organization,
@@ -288,4 +313,5 @@ export class OrganizationService {
 
         return { organizations: organizationsPayload, newAccessToken, newRefreshToken };
     }
+
 }

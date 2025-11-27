@@ -25,7 +25,8 @@ export class CategoriesService {
   ) {}
 
   async create(dto: CreateCategoryDto, user: RequestWithUser['user'], organizationId: string): Promise<Category> {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para crear categorías en esta organización.');
     }
 
@@ -49,7 +50,8 @@ export class CategoriesService {
   }
 
   async update(id: string, dto: UpdateCategoryDto, user: RequestWithUser['user'], organizationId: string): Promise<Category> {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para actualizar categorías en esta organización.');
     }
 
@@ -73,7 +75,8 @@ export class CategoriesService {
    * - Si se pasa reassignTo (id de otra categoría), reasigna testimonios y luego elimina.
    */
   async delete(id: string, user: RequestWithUser['user'], organizationId: string, reassignTo?: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para eliminar categorías en esta organización.');
     }
 
@@ -106,7 +109,13 @@ export class CategoriesService {
   }
 
   async findAll(user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    console.log(`[CategoriesService] -- INICIO findAll --`);
+    console.log(`[CategoriesService] User object received in findAll: ${JSON.stringify(user)}`);
+    console.log(`[CategoriesService] organizationId received: ${organizationId}`);
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    console.log(`[CategoriesService] Found userOrg: ${JSON.stringify(userOrg)}`);
+    if (!user || !userOrg) {
+      console.log('[CategoriesService] Authorization failed: User or userOrg not found.');
       throw new UnauthorizedException('No autorizado para listar categorías de esta organización.');
     }
     return this.repo.find({
