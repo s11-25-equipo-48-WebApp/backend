@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateTagDto } from './dto/CreateTagDto';
 import { UpdateTagDto } from './dto/UpdateTagDto';
+import { GetTagsQueryDto } from './dto/GetTagsQueryDto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tag } from './entities/tag.entity';
@@ -17,7 +18,8 @@ export class TagsService {
   ){}
 
   async create(dto: CreateTagDto, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para crear tags en esta organización.');
     }
 
@@ -41,18 +43,42 @@ export class TagsService {
     return this.repo.save(tag);
   }
 
-  async findAll(user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+  async findAll(user: RequestWithUser['user'], organizationId: string, queryDto: GetTagsQueryDto) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para listar tags de esta organización.');
     }
-    return this.repo.find({
-      where: { organization: { id: organizationId } },
-      order: { name: 'ASC' }
-    });
+
+    const { search, page = 1, limit = 10 } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.repo.createQueryBuilder('tag');
+    queryBuilder
+      .where('tag.organization.id = :organizationId', { organizationId })
+      .orderBy('tag.name', 'ASC')
+      .skip(skip)
+      .take(limit);
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(LOWER(tag.name) LIKE LOWER(:search) OR LOWER(tag.description) LIKE LOWER(:search))',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [tags, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data: tags,
+      total,
+      page,
+      limit,
+    };
   }
 
   async findOne(id: string, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para ver este tag en esta organización.');
     }
     const tag = await this.repo.findOne({ where: { id, organization: { id: organizationId } } });
@@ -61,7 +87,8 @@ export class TagsService {
   }
 
   async update(id: string, dto: UpdateTagDto, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para actualizar tags en esta organización.');
     }
     const tag = await this.findOne(id, user, organizationId); // findOne ya valida la organización
@@ -81,7 +108,8 @@ export class TagsService {
   }
 
   async delete(id: string, user: RequestWithUser['user'], organizationId: string) {
-    if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
       throw new UnauthorizedException('No autorizado para eliminar tags en esta organización.');
     }
     const tag = await this.findOne(id, user, organizationId); // findOne ahora valida la organización con organizationId

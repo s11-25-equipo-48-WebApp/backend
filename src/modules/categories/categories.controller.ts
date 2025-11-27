@@ -50,8 +50,8 @@ export class CategoriesController {
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
-  @HttpCode(HttpStatus.CREATED) 
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear categoría', description: 'Crea una nueva categoría. Name debe ser único dentro de la organización.' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiBody({ type: CreateCategoryDto })

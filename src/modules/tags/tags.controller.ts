@@ -20,9 +20,11 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Query } from '@nestjs/common';
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/CreateTagDto';
 import { UpdateTagDto } from './dto/UpdateTagDto';
+import { GetTagsQueryDto } from './dto/GetTagsQueryDto';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -43,8 +45,12 @@ export class TagsController {
   @ApiOperation({ summary: 'Listar tags' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ type: [Tag] })
-  async findAll(@Param('organizationId') organizationId: string, @Req() req) {
-    return await this.service.findAll(req.user, organizationId);
+  async findAll(
+    @Param('organizationId') organizationId: string,
+    @Req() req,
+    @Query() query: GetTagsQueryDto,
+  ) {
+    return await this.service.findAll(req.user, organizationId, query);
   }
 
   @Post()

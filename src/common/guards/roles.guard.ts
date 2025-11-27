@@ -15,14 +15,31 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles) {
       return true;
     }
-    const { user } = context.switchToHttp().getRequest();
-    if (!user || !user.organization || !user.organization.role) {
-      // Si no hay usuario, organización o rol de organización, denegar el acceso
+    const request = context.switchToHttp().getRequest();
+    const { user } = request;
+
+    if (!user || !user.organizations || user.organizations.length === 0) {
+      // Si no hay usuario o no pertenece a ninguna organización, denegar el acceso
       return false;
     }
 
-    const userOrganizationRole = user.organization.role;
+    const organizationId = request.params.organizationId;
+    if (!organizationId) {
+      // Si el endpoint requiere un organizationId pero no está presente en los parámetros, denegar
+      // Esto puede ocurrir en endpoints que no tienen :organizationId en la ruta pero usan RolesGuard
+      // Dependiendo de la lógica, se podría lanzar una excepción BadRequest aquí
+      return false;
+    }
 
-    return requiredRoles.some((role) => userOrganizationRole === role);
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+
+    if (!userOrg) {
+      // El usuario no pertenece a la organización a la que intenta acceder
+      return false;
+    }
+
+    const userRoleInOrganization = userOrg.role;
+
+    return requiredRoles.some((role) => userRoleInOrganization === role);
   }
 }

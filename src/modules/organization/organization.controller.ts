@@ -49,6 +49,7 @@ export class OrganizationController {
     }));
   }
 
+  // Ver una organziacion en especifico
   // ====================
   // Endpoints de Organización
   // ====================
@@ -100,7 +101,7 @@ export class OrganizationController {
 
   @Get(':organizationId')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
   @ApiOperation({ summary: 'Obtener detalles de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Detalles de la organización' })
@@ -108,11 +109,7 @@ export class OrganizationController {
     @Param('organizationId') organizationId: string,
     @Req() req
   ) {
-    const user = req.user;
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para acceder a esta organización o rol insuficiente.');
-    }
+    // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     return this.organizationService.getOrganizationDetails(organizationId);
   }
 
@@ -136,11 +133,7 @@ export class OrganizationController {
     @Body() updateDto: UpdateOrganizationDto,
     @Req() req,
   ) {
-    const user = req.user;
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para actualizar esta organización o rol insuficiente.');
-    }
+    // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     return this.organizationService.updateOrganization(organizationId, updateDto);
   }
 
@@ -154,11 +147,7 @@ export class OrganizationController {
     @Param('organizationId') organizationId: string,
     @Req() req
   ) {
-    const user = req.user;
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para eliminar esta organización o rol insuficiente.');
-    }
+    // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     await this.organizationService.deleteOrganization(organizationId);
     return { message: 'Organización eliminada exitosamente' };
   }
@@ -166,7 +155,7 @@ export class OrganizationController {
   // ====================
   // Endpoints de Miembros de Organización
   // ====================
-
+  
   @Post(':organizationId/members')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
@@ -189,9 +178,6 @@ export class OrganizationController {
   ) {
     const user = req.user;
     const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para agregar miembros a esta organización o rol insuficiente.');
-    }
     // Solo permitir añadir roles de EDITOR o ADMIN para usuarios normales
     if (userOrg.role === Role.ADMIN && (addMemberDto.role === Role.SUPERADMIN)) {
       throw new UnauthorizedException('Un administrador no puede agregar miembros con rol SUPERADMIN.');
@@ -214,9 +200,6 @@ export class OrganizationController {
   ) {
     const user = req.user;
     const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para eliminar miembros de esta organización o rol insuficiente.');
-    }
     // Un administrador no puede eliminarse a sí mismo ni a otros administradores o superadministradores
     if (userOrg.role === Role.ADMIN && (user.id === userId || (await this.organizationService.getOrganizationDetails(organizationId)).members.some(m => m.user.id === userId && (m.role === Role.ADMIN || m.role === Role.SUPERADMIN)))) {
       throw new UnauthorizedException('Un administrador no puede eliminar a otros administradores o superadministradores, ni eliminarse a sí mismo.');
@@ -253,9 +236,6 @@ export class OrganizationController {
   ) {
     const user = req.user;
     const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para actualizar roles de miembros en esta organización o rol insuficiente.');
-    }
     // Un administrador no puede cambiar el rol de un superadministrador ni a sí mismo a un rol inferior
     if (userOrg.role === Role.ADMIN) {
       const targetMember = await this.organizationService.getOrganizationDetails(organizationId).then(org => org.members.find(m => m.user.id === userId));
@@ -302,10 +282,6 @@ export class OrganizationController {
   ) {
     const user = req.user;
     const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para agregar miembros a esta organización o rol insuficiente.');
-    }
-
     // Un administrador no puede registrar miembros con rol SUPERADMIN
     if (userOrg.role === Role.ADMIN && createMemberDto.role === Role.SUPERADMIN) {
       throw new UnauthorizedException('Un administrador no puede asignar el rol SUPERADMIN.');
@@ -350,11 +326,7 @@ export class OrganizationController {
     @Param('userId') userId: string,
     @Req() req,
   ) {
-    const user = req.user;
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para ver detalles de miembros de esta organización o rol insuficiente.');
-    }
+    // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     return this.organizationService.getOrganizationMemberDetails(organizationId, userId);
   }
 
@@ -395,11 +367,7 @@ export class OrganizationController {
     @Param('organizationId') organizationId: string,
     @Req() req,
   ) {
-    const user = req.user;
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    if (!userOrg || ![Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR].includes(userOrg.role)) {
-      throw new UnauthorizedException('No autorizado para ver miembros de esta organización o rol insuficiente.');
-    }
+    // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     return this.organizationService.getOrganizationMembers(organizationId);
   }
 }

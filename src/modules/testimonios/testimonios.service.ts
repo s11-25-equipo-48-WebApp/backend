@@ -34,7 +34,8 @@ export class TestimoniosService {
      * Estado inicial: 'pending'.
      */
     async create(dto: CreateTestimonioDto, user: RequestWithUser['user'], organizationId: string): Promise<Testimonio> {
-        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+        const userOrg = user.organizations.find(org => org.id === organizationId);
+        if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para crear testimonios en esta organización.');
         }
 
@@ -73,7 +74,8 @@ export class TestimoniosService {
         });
 
         // Lógica para determinar el estado inicial del testimonio
-        const isAdminOrSuperAdmin = user?.organization?.role === Role.ADMIN || user?.organization?.role === Role.SUPERADMIN;
+        // userOrg ya está definido al inicio del método
+        const isAdminOrSuperAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
         entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
 
         // Si se aprueba automáticamente, establecer approved_by y approved_at
@@ -97,9 +99,9 @@ export class TestimoniosService {
         user: RequestWithUser['user'],
         organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
-
+        const userOrg = user.organizations.find(org => org.id === organizationId);
         // Buscar testimonio y validar organización
-        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+        if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para editar testimonios en esta organización.');
         }
 
@@ -113,7 +115,8 @@ export class TestimoniosService {
             throw new ForbiddenException('Authentication required to edit testimonio');
         }
 
-        const isAdmin = user.organization?.role === Role.ADMIN || user.organization?.role === Role.SUPERADMIN; // Incluir superadmin
+        // userOrg ya está definido al inicio del método
+        const isAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN; // Incluir superadmin
         const isAuthor = existing.author_id === user.id;
 
         // Permisos: autor, admin o superadmin
@@ -202,8 +205,9 @@ export class TestimoniosService {
         user: RequestWithUser['user'],
         organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
+        const userOrg = user.organizations.find(org => org.id === organizationId);
         // buscar testimonio
-        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+        if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para cambiar el estado de testimonios en esta organización.');
         }
         const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
@@ -217,7 +221,8 @@ export class TestimoniosService {
         }
 
         // validar rol
-        const userOrganizationRole = user.organization.role;
+        // userOrg ya está definido al inicio del método
+        const userOrganizationRole = userOrg.role;
         const isAdmin = userOrganizationRole === Role.ADMIN;
 
         if (!isAdmin) {
@@ -336,8 +341,9 @@ export class TestimoniosService {
     * - Registra audit_log con diff (before/after).
     */
     async softDelete(id: string, user: RequestWithUser['user'], organizationId: string): Promise<{ id: string; deleted_at: Date }> {
+        const userOrg = user.organizations.find(org => org.id === organizationId);
         //  buscar (ya excluye borrados)
-        if (!user || !user.organization?.id || user.organization.id !== organizationId) {
+        if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para eliminar testimonios en esta organización.');
         }
         const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
@@ -351,7 +357,8 @@ export class TestimoniosService {
         }
 
         // sólo admin puede eliminar (según criterio)
-        const userOrganizationRole = user.organization.role;
+        // userOrg ya está definido al inicio del método
+        const userOrganizationRole = userOrg.role;
         const isAdmin = userOrganizationRole === Role.ADMIN;
         if (!isAdmin) {
             throw new ForbiddenException('Solo administradores pueden eliminar testimonios');

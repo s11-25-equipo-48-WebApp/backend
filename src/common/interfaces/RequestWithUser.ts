@@ -5,10 +5,10 @@ export interface RequestWithUser extends Request {
     user: {
         id: string;
         email: string;
-        organization?: {
+        organizations: { // Ahora es un array de organizaciones
             id: string;
-            name?: string;
+            name: string;
             role: Role;
-        };
+        }[];
     };
 }

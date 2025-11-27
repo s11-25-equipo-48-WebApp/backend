@@ -11,6 +11,8 @@ import { AuthModule } from "../auth/auth.module";
 import { User } from "../auth/entities/user.entity";
 import { AuthToken } from "../auth/entities/authToken.entity";
 import { Embed } from "../embedb/entities/embed.entity";
+import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity";
+import { Category } from "src/modules/categories/entities/category.entity";
 
 @Module({
     imports: [
@@ -26,11 +28,13 @@ import { Embed } from "../embedb/entities/embed.entity";
             }),
         }),
         TypeOrmModule.forFeature([
-            Organization, 
+            Organization,
             OrganizationUser,
-            User, 
+            User,
             AuthToken,
-            Embed
+            Embed,
+            Testimonio,
+            Category // Añadir Category aquí
         ]),
         forwardRef(() => AuthModule),
     ],
