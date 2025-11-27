@@ -26,6 +26,30 @@ export class OrganizationController {
   ) { }
 
   // ====================
+  // Endpoints de Usuario y Organización
+  // ====================
+
+  @Get('my-organizations')
+  @ApiOperation({ summary: 'Obtener las organizaciones a las que pertenece el usuario autenticado' })
+  @ApiOkResponse({ description: 'Lista de organizaciones del usuario', type: [OrganizationMemberDto] })
+  async getMyOrganizations(@Req() req) {
+    const user = req.user;
+    if (!user || !user.organizations) {
+      return [];
+    }
+    // Asumiendo que req.user.organizations ya contiene la información necesaria
+    // Si se necesita un DTO más detallado, se podría mapear aquí
+    return user.organizations.map(org => ({
+      id: org.id,
+      name: org.name,
+      role: org.role,
+      is_active: org.is_active,
+      createdAt: org.createdAt,
+      updatedAt: org.updatedAt,
+    }));
+  }
+
+  // ====================
   // Endpoints de Organización
   // ====================
 

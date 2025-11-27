@@ -104,7 +104,15 @@ Este documento detalla los endpoints disponibles en la API, su propósito, méto
 
 **Ruta Base:** `/organization`
 
-### 3.1. `POST /organization`
+### 3.1. `GET /organization/my-organizations`
+- **Descripción:** Obtiene una lista de todas las organizaciones a las que pertenece el usuario autenticado.
+- **Método:** `GET`
+- **Ruta Completa:** `/organization/my-organizations`
+- **Cuerpo de la Petición (Body):** N/A
+- **Roles Requeridos:** Autenticado (cualquier rol)
+- **Notas:** Requiere autenticación con `accessToken` válido en el encabezado `Authorization` (Bearer). Retorna un array de `OrganizationMemberDto` con los detalles de las organizaciones del usuario.
+
+### 3.2. `POST /organization`
 
 - **Descripción:** Crea una nueva organización y asigna al usuario que la crea a ella.
 - **Método:** `POST`
