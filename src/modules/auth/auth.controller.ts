@@ -15,7 +15,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
-  ) {}
+  ) { }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -31,10 +31,13 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken, ...user } = await this.authService.login(loginUserDto);
 
+    const isProd = this.config.get('NODE_ENV') === 'production';
+
     res.cookie('refresh-token', refreshToken, {
       httpOnly: true,
-      secure: this.config.get('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      secure: isProd,                     // https en prod
+      sameSite: isProd ? 'none' : 'lax',  // none para frontend vercel
+      path: '/api/v1/auth/refresh',
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 

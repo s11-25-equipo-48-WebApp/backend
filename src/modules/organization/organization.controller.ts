@@ -85,12 +85,16 @@ export class OrganizationController {
       createOrganizationDto,
     );
 
+    const isProd = this.configService.get('NODE_ENV') === 'production';
+
     res.cookie('refresh-token', newRefreshToken, {
       httpOnly: true,
-      secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/api/v1/auth/refresh',
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
+
 
     return {
       message: 'Organización creada y asignada exitosamente.',
@@ -155,7 +159,7 @@ export class OrganizationController {
   // ====================
   // Endpoints de Miembros de Organización
   // ====================
-  
+
   @Post(':organizationId/members')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
@@ -335,7 +339,7 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Obtener todos los miembros de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
-  @ApiOkResponse({ 
+  @ApiOkResponse({
     description: 'Lista de miembros de la organización',
     type: [OrganizationMemberDto], // Indicar que devuelve un array del DTO
     schema: {
