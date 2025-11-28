@@ -27,6 +27,9 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://cms-testimonials.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
       '*',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
