@@ -38,10 +38,46 @@ export class OrganizationService {
         private readonly authService: AuthService, // Inyectar AuthService
     ) { }
 
+    async getUserOrganizationsWithMembers(userId: string): Promise<any[]> {
+        const organizationUsers = await this.organizationUserRepository.find({
+            where: { user: { id: userId } },
+            relations: ['organization', 'organization.members', 'organization.members.user', 'organization.members.user.profile'],
+        });
+
+        if (!organizationUsers || organizationUsers.length === 0) {
+            return [];
+        }
+
+        return organizationUsers.map(ou => {
+            const org = ou.organization;
+            const members = org.members.map(memberOu => ({
+                id: memberOu.user.id,
+                email: memberOu.user.email,
+                name: memberOu.user.name || null,
+                bio: memberOu.user.profile?.bio || null,
+                avatarUrl: memberOu.user.profile?.avatar_url || null,
+                role: memberOu.role,
+                is_active: memberOu.user.is_active,
+                createdAt: memberOu.user.created_at,
+            }));
+
+            return {
+                id: org.id,
+                name: org.name,
+                description: org.description,
+                role: ou.role, // Rol del usuario actual en esta organización
+                editors: members.filter(m => m.role === Role.EDITOR).length,
+                members: members.length,
+                createdAt: org.createdAt,
+                allMembers: members, // Opcional: para tener todos los detalles de los miembros si se necesitan
+            };
+        });
+    }
+
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: organizationId },
-            // Ya no cargamos la relación 'members' aquí
+            relations: ['members', 'members.user', 'members.user.profile'], // Cargar miembros aquí también
         });
 
         if (!organization) {
@@ -245,8 +281,15 @@ export class OrganizationService {
             throw new BadRequestException('El usuario ya pertenece a una organización.');
         }
 
+        // Verificar si ya existe una organización con el mismo nombre
+        const existingOrganizationByName = await this.organizationRepository.findOneBy({ name: createOrganizationDto.name });
+        if (existingOrganizationByName) {
+            throw new BadRequestException('Ya existe una organización con este nombre.');
+        }
+
         const organization = this.organizationRepository.create({
             name: createOrganizationDto.name,
+            description: createOrganizationDto.description,
         });
         await this.organizationRepository.save(organization);
 
@@ -283,6 +326,7 @@ export class OrganizationService {
         const organizationsPayload = userOrganizations.map(ou => ({
             id: ou.organization.id,
             name: ou.organization.name,
+            description: ou.organization.description,
             role: ou.role,
         }));
 

@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, Res, HttpCode, HttpStatus, Logger } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags, ApiBody, ApiParam } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags, ApiBody, ApiParam, ApiBadRequestResponse } from "@nestjs/swagger";
 import { OrganizationService } from "./organization.service";
 import { JwtAuthGuard } from "src/jwt/jwt.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -34,35 +34,66 @@ export class OrganizationController {
   @ApiOkResponse({ description: 'Lista de organizaciones del usuario', type: [OrganizationMemberDto] })
   async getMyOrganizations(@Req() req) {
     const user = req.user;
-    if (!user || !user.organizations) {
+    if (!user || !user.id) {
       return [];
     }
-    // Asumiendo que req.user.organizations ya contiene la información necesaria
-    // Si se necesita un DTO más detallado, se podría mapear aquí
-    return user.organizations.map(org => ({
-      id: org.id,
-      name: org.name,
-      role: org.role,
-      is_active: org.is_active,
-      createdAt: org.createdAt,
-      updatedAt: org.updatedAt,
-    }));
+    return this.organizationService.getUserOrganizationsWithMembers(user.id);
   }
 
   // Ver una organziacion en especifico
   // ====================
   // Endpoints de Organización
   // ====================
+  // se mejoro la return , se agrego descripcion de la organizacion
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva organización y asignar al usuario' })
-  @ApiOkResponse({ description: 'Organización creada y usuario asignado' })
+  @ApiOkResponse({
+    description: 'Organización creada y usuario asignado',
+    schema: {
+      example: {
+        message: 'Organización creada y asignada exitosamente.',
+        organizations: [
+          {
+            id: 'uuid-organization-1',
+            name: 'Mi Nueva Organización',
+            description: 'Descripción de mi nueva organización.',
+            role: 'ADMIN',
+          },
+        ],
+        accessToken: 'jwt-access-token',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Ya existe una organización con este nombre o el usuario ya pertenece a una organización.',
+    schema: {
+      examples: {
+        nameConflict: {
+          summary: 'Conflicto de nombre de organización',
+          value: {
+            statusCode: 400,
+            message: 'Ya existe una organización con este nombre.',
+            error: 'Bad Request',
+          },
+        },
+        userAlreadyInOrg: {
+          summary: 'Usuario ya pertenece a una organización',
+          value: {
+            statusCode: 400,
+            message: 'El usuario ya pertenece a una o más organizaciones.',
+            error: 'Bad Request',
+          },
+        },
+      },
+    },
+  })
   @ApiBody({
     type: CreateOrganizationDto,
     examples: {
       a: {
         summary: 'Ejemplo de creación de organización',
-        value: { name: 'Mi Nueva Organización' },
+        value: { name: 'Mi Nueva Organización', description: 'Descripción de mi nueva organización.' },
       },
     },
   })
@@ -108,7 +139,17 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
   @ApiOperation({ summary: 'Obtener detalles de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
-  @ApiOkResponse({ description: 'Detalles de la organización' })
+  @ApiOkResponse({
+    description: 'Detalles de la organización',
+    schema: {
+      example: {
+        id: 'uuid-organization-1',
+        name: 'Nombre de la Organización',
+        description: 'Descripción detallada de la organización.',
+        // Otros campos como `members`, `testimonios`, `categories`, `tags`, `embed`, `createdAt`
+      },
+    },
+  })
   async getOrganizationDetails(
     @Param('organizationId') organizationId: string,
     @Req() req
