@@ -168,8 +168,8 @@ export class OrganizationController {
     type: UpdateOrganizationDto,
     examples: {
       a: {
-        summary: 'Ejemplo de actualización de nombre de organización',
-        value: { name: 'Nuevo Nombre de Organización' },
+        summary: 'Ejemplo de actualización de nombre y descripción de organización',
+        value: { name: 'Nuevo Nombre de Organización', description: 'Nueva descripción de la organización.' },
       },
     },
   })

@@ -103,6 +103,7 @@ export class OrganizationService {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
         }
         organization.name = updateDto.name;
+        organization.description = updateDto.description;
         return this.organizationRepository.save(organization);
     }
 
