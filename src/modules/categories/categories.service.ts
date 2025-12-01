@@ -109,11 +109,19 @@ export class CategoriesService {
   }
 
   async findAll(user: RequestWithUser['user'], organizationId: string) {
+    // Validar autorización del usuario
+    const userOrg = user.organizations.find(org => org.id === organizationId);
+    if (!user || !userOrg) {
+      throw new UnauthorizedException('No autorizado para listar categorías de esta organización.');
+    }
+
+    // Obtener todas las categorías de la organización
     const categories = await this.repo.find({
       where: { organization: { id: organizationId } },
       order: { name: 'ASC' },
     });
-    // Para cada categoría, contar testimonios
+
+    // Para cada categoría, contar testimonios (solo los no eliminados)
     const categoriesWithCount = await Promise.all(
       categories.map(async (category) => {
         const count = await this.testimonioRepo.count({
@@ -123,6 +131,7 @@ export class CategoriesService {
             deleted_at: IsNull(),
           },
         });
+
         return {
           id: category.id,
           name: category.name,
@@ -131,6 +140,7 @@ export class CategoriesService {
         };
       })
     );
+
     return categoriesWithCount;
   }
 }

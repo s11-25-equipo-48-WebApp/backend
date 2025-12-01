@@ -38,13 +38,30 @@ import { Role } from '../organization/entities/enums';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('access-token')
 export class CategoriesController {
-  constructor(private readonly service: CategoriesService) {}
+  constructor(private readonly service: CategoriesService) { }
 
   @Get()
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
-  @ApiOperation({ summary: 'Listar categorías' })
-  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' }) 
-  @ApiOkResponse({ type: Category, isArray: true })
+  @ApiOperation({
+    summary: 'Listar categorías',
+    description: 'Retorna todas las categorías de la organización con el conteo de testimonios asociados'
+  })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiOkResponse({
+    description: 'Lista de categorías con conteo de uso',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          usage_count: { type: 'number', description: 'Cantidad de testimonios usando esta categoría' },
+          created_at: { type: 'string', format: 'date-time' }
+        }
+      }
+    }
+  })
   async findAll(@Param('organizationId') organizationId: string, @Req() req) {
     return await this.service.findAll(req.user, organizationId);
   }
