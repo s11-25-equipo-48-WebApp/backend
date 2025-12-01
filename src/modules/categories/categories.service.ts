@@ -7,7 +7,7 @@ import {
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 import { Testimonio } from '../testimonios/entities/testimonio.entity';
 import { RequestWithUser } from 'src/common/interfaces/RequestWithUser';
@@ -22,7 +22,7 @@ export class CategoriesService {
     private readonly testimonioRepo: Repository<Testimonio>,
     @InjectRepository(Organization)
     private readonly organizationRepo: Repository<Organization>,
-  ) {}
+  ) { }
 
   async create(dto: CreateCategoryDto, user: RequestWithUser['user'], organizationId: string): Promise<Category> {
     const userOrg = user.organizations.find(org => org.id === organizationId);
@@ -109,18 +109,28 @@ export class CategoriesService {
   }
 
   async findAll(user: RequestWithUser['user'], organizationId: string) {
-    console.log(`[CategoriesService] -- INICIO findAll --`);
-    console.log(`[CategoriesService] User object received in findAll: ${JSON.stringify(user)}`);
-    console.log(`[CategoriesService] organizationId received: ${organizationId}`);
-    const userOrg = user.organizations.find(org => org.id === organizationId);
-    console.log(`[CategoriesService] Found userOrg: ${JSON.stringify(userOrg)}`);
-    if (!user || !userOrg) {
-      console.log('[CategoriesService] Authorization failed: User or userOrg not found.');
-      throw new UnauthorizedException('No autorizado para listar categorías de esta organización.');
-    }
-    return this.repo.find({
+    const categories = await this.repo.find({
       where: { organization: { id: organizationId } },
       order: { name: 'ASC' },
     });
+    // Para cada categoría, contar testimonios
+    const categoriesWithCount = await Promise.all(
+      categories.map(async (category) => {
+        const count = await this.testimonioRepo.count({
+          where: {
+            category: { id: category.id },
+            organization: { id: organizationId },
+            deleted_at: IsNull(),
+          },
+        });
+        return {
+          id: category.id,
+          name: category.name,
+          usage_count: count,
+          created_at: category.createdAt,
+        };
+      })
+    );
+    return categoriesWithCount;
   }
 }
