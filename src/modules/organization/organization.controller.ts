@@ -21,7 +21,6 @@ import { Role } from "./entities/enums";
 export class OrganizationController {
   constructor(
     private readonly organizationService: OrganizationService,
-    private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) { }
 

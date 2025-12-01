@@ -41,7 +41,8 @@ import { Organization } from "../organization/entities/organization.entity";
   controllers: [AuthController],
   exports: [
     AuthService,
-    JwtStrategy
+    JwtStrategy,
+    PassportModule
   ],
 })
 export class AuthModule {}
