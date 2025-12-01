@@ -10,14 +10,15 @@ import { CreateOrganizationMemberDto } from "./dto/create-organization-member.dt
 import { OrganizationMemberDto } from "./dto/organization-member.dto"; // Importar OrganizationMemberDto
 import { AuthService } from "src/modules/auth/auth.service";
 import type { Response } from 'express';
-import { ConfigService } from "@nestjs/config";
+import { Query } from "@nestjs/common"; // Importar Query
+import { ConfigService } from "@nestjs/config"; // Importar ConfigService de @nestjs/config
 import { Role } from "./entities/enums";
-
+import { Public } from "src/common/decorators/public.decorator";
+import { GetOrganizationsQueryDto } from "./dto/get-organizations-query.dto"; // Importar el nuevo DTO
+import { ApiQuery } from "@nestjs/swagger"; // Importar ApiQuery
 
 @ApiTags('Organization')
 @Controller('organization')
-@UseGuards(JwtAuthGuard) // Eliminar RolesGuard para endpoints que no requieren un rol de organización preexistente
-@ApiBearerAuth('access-token')
 export class OrganizationController {
   constructor(
     private readonly organizationService: OrganizationService,
@@ -25,9 +26,44 @@ export class OrganizationController {
   ) { }
 
   // ====================
+  // Endpoint público para listar organizaciones
+  // Este endpoint NO requiere autenticación ni roles.
+  // ====================
+  @Get('public')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Obtener una lista pública paginada de todas las organizaciones (id, nombre, descripción)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número de página', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de elementos por página', example: 20 })
+  @ApiOkResponse({
+    description: 'Lista paginada de todas las organizaciones con ID, nombre y descripción.',
+    schema: {
+      example: {
+        data: [
+          { id: 'uuid-organization-1', name: 'Organización A', description: 'Descripción de la Organización A.' },
+          { id: 'uuid-organization-2', name: 'Organización B', description: 'Descripción de la Organización B.' },
+        ],
+        meta: {
+          total: 2,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        },
+      },
+    },
+  })
+  async getAllPublicOrganizations(
+    @Query() query: GetOrganizationsQueryDto
+  ) {
+    const { page, limit } = query;
+    return this.organizationService.findAllOrganizationsPublic(page, limit);
+  }
+
+  // ====================
   // Endpoints de Usuario y Organización
   // ====================
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Get('my-organizations')
   @ApiOperation({ summary: 'Obtener las organizaciones a las que pertenece el usuario autenticado' })
   @ApiOkResponse({ description: 'Lista de organizaciones del usuario', type: [OrganizationMemberDto] })
@@ -44,7 +80,7 @@ export class OrganizationController {
   // Endpoints de Organización
   // ====================
   // se mejoro la return , se agrego descripcion de la organizacion
-
+  @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: 'Crear una nueva organización y asignar al usuario' })
   @ApiOkResponse({
@@ -134,8 +170,8 @@ export class OrganizationController {
   }
 
   @Get(':organizationId')
+  @UseGuards(JwtAuthGuard)
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
   @ApiOperation({ summary: 'Obtener detalles de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({
@@ -159,6 +195,8 @@ export class OrganizationController {
 
   @Patch(':organizationId')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Actualizar una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -183,6 +221,8 @@ export class OrganizationController {
 
   @Delete(':organizationId')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Eliminar una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -202,6 +242,8 @@ export class OrganizationController {
 
   @Post(':organizationId/members')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Agregar un miembro a una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -232,6 +274,8 @@ export class OrganizationController {
 
   @Delete(':organizationId/members/:userId')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Eliminar un miembro de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -254,6 +298,8 @@ export class OrganizationController {
 
   @Patch(':organizationId/members/:userId/role')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Actualizar el rol de un miembro de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -301,6 +347,8 @@ export class OrganizationController {
 
   @Post(':organizationId/members/register')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: 'Agregar un miembro (por ID de usuario o email) a una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -345,6 +393,8 @@ export class OrganizationController {
 
   @Get(':organizationId/members/:userId') // Nuevo endpoint
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN) // Solo ADMIN o SUPERADMIN pueden ver los detalles de un miembro
   @ApiOperation({ summary: 'Obtener detalles de un miembro de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -376,6 +426,8 @@ export class OrganizationController {
 
   @Get(':organizationId/members')
   @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Obtener todos los miembros de una organización específica' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
@@ -413,5 +465,73 @@ export class OrganizationController {
   ) {
     // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
     return this.organizationService.getOrganizationMembers(organizationId);
+  }
+
+  @Get(':organizationId/members/pending')
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @ApiOperation({ summary: 'Obtener todas las solicitudes de unión pendientes para una organización específica' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiOkResponse({
+    description: 'Lista de miembros con solicitudes pendientes',
+    type: [OrganizationMemberDto],
+    schema: {
+      example: [
+        {
+          id: 'uuid-user-3',
+          email: 'pending@example.com',
+          name: 'Pending User',
+          bio: null,
+          avatarUrl: null,
+          role: 'EDITOR', // Rol asignado en la solicitud, pero inactivo
+          is_active: false,
+          createdAt: '2025-11-26T01:00:00.000Z',
+        },
+      ],
+    },
+  })
+  async getPendingMembers(
+    @Param('organizationId') organizationId: string,
+    @Req() req,
+  ) {
+    return this.organizationService.getPendingJoinRequests(organizationId);
+  }
+
+  @Patch(':organizationId/members/:userId/approve')
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Aprobar una solicitud de unión de un miembro a una organización' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid) cuya solicitud será aprobada' })
+  @ApiOkResponse({ description: 'Miembro aprobado exitosamente' })
+  async approveMember(
+    @Param('organizationId') organizationId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.organizationService.approveJoinRequest(organizationId, userId);
+    return { message: 'Solicitud de unión aprobada exitosamente.' };
+  }
+
+  @Delete(':organizationId/members/:userId/reject')
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rechazar una solicitud de unión de un miembro a una organización' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiParam({ name: 'userId', description: 'ID del usuario miembro (uuid) cuya solicitud será rechazada' })
+  @ApiOkResponse({ description: 'Miembro rechazado exitosamente' })
+  async rejectMember(
+    @Param('organizationId') organizationId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.organizationService.rejectJoinRequest(organizationId, userId);
+    return { message: 'Solicitud de unión rechazada y eliminada exitosamente.' };
   }
 }

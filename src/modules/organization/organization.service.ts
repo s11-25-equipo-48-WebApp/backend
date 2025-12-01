@@ -131,7 +131,7 @@ export class OrganizationService {
 
         // Revisar si ya existe una relación para evitar duplicados
         if (existingMember) {
-          throw new BadRequestException('El usuario ya es miembro de esta organización.');
+            throw new BadRequestException('El usuario ya es miembro de esta organización.');
         }
 
         const newMember = this.organizationUserRepository.create({
@@ -359,4 +359,99 @@ export class OrganizationService {
         return { organizations: organizationsPayload, newAccessToken, newRefreshToken };
     }
 
+    /**
+     * Obtiene todas las solicitudes de unión pendientes (usuarios inactivos) para una organización.
+     * @param organizationId El ID de la organización.
+     * @returns Una lista de objetos OrganizationMemberDto para usuarios pendientes.
+     */
+    async getPendingJoinRequests(organizationId: string): Promise<OrganizationMemberDto[]> {
+        const pendingMembers = await this.organizationUserRepository.find({
+            where: {
+                organization: { id: organizationId },
+                is_active: false,
+            },
+            relations: ['user', 'user.profile'],
+        });
+
+        if (!pendingMembers || pendingMembers.length === 0) {
+            return []; // O lanzar un NotFoundException si no hay solicitudes pendientes, según la lógica de negocio deseada
+        }
+
+        return pendingMembers.map(member => ({
+            id: member.user.id,
+            email: member.user.email,
+            name: member.user.name || null,
+            bio: member.user.profile?.bio || null,
+            avatarUrl: member.user.profile?.avatar_url || null,
+            role: member.role,
+            is_active: member.is_active, // Usar member.is_active para mostrar el estado correcto
+            createdAt: member.createdAt,
+        }));
+    }
+
+    /**
+     * Aprueba una solicitud de unión, activando al miembro de la organización.
+     * @param organizationId El ID de la organización.
+     * @param userId El ID del usuario cuya solicitud se va a aprobar.
+     * @returns El objeto OrganizationUser actualizado.
+     */
+    async approveJoinRequest(organizationId: string, userId: string): Promise<OrganizationUser> {
+        const member = await this.organizationUserRepository.findOne({
+            where: {
+                organization: { id: organizationId },
+                user: { id: userId },
+                is_active: false, // Solo aprobar solicitudes pendientes
+            },
+        });
+
+        if (!member) {
+            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+        }
+
+        member.is_active = true; // Activar al miembro
+        return this.organizationUserRepository.save(member);
+    }
+
+    /**
+     * Rechaza una solicitud de unión, eliminando al miembro de la organización.
+     * @param organizationId El ID de la organización.
+     * @param userId El ID del usuario cuya solicitud se va a rechazar.
+     */
+    async rejectJoinRequest(organizationId: string, userId: string): Promise<void> {
+        const result = await this.organizationUserRepository.delete({
+            organization: { id: organizationId },
+            user: { id: userId },
+            is_active: false, // Solo rechazar solicitudes pendientes
+        });
+
+        if (result.affected === 0) {
+            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+        }
+    }
+
+    /**
+     * Obtiene una lista pública de todas las organizaciones con su ID, nombre y descripción.
+     * Este endpoint no requiere autenticación.
+     * @returns Una lista de objetos con id, name y description de cada organización.
+     */
+    async findAllOrganizationsPublic(page: number = 1, limit: number = 20): Promise<{ data: { id: string; name: string; description: string }[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
+        const skip = (page - 1) * limit;
+
+        const [organizations, total] = await this.organizationRepository.findAndCount({
+            select: ['id', 'name', 'description'],
+            take: limit,
+            skip: skip,
+            order: { name: 'ASC' }, // Ordenar por nombre para consistencia
+        });
+
+        return {
+            data: organizations,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
 }

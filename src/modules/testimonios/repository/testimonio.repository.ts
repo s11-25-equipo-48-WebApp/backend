@@ -41,7 +41,8 @@ async softDelete(entity: Testimonio) {
 async findPublicWithFilters(opts: {
   category_id?: string;
   tag_id?: string;
-  organization_id?: string; // Nuevo: organization_id
+  organization_id?: string;
+  status?: string; // Añadido: status
   page?: number;
   limit?: number;
 }): Promise<[Testimonio[], number]> {
@@ -65,6 +66,11 @@ async findPublicWithFilters(opts: {
   // Nuevo: filtrar por organization_id
   if (opts.organization_id) {
     qb.andWhere('t.organization_id = :organizationId', { organizationId: opts.organization_id });
+  }
+
+  // Nuevo: filtrar por status
+  if (opts.status) {
+    qb.andWhere('t.status = :status', { status: opts.status });
   }
 
   qb.orderBy('t.created_at', 'DESC').skip(skip).take(limit);

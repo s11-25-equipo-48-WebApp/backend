@@ -420,4 +420,35 @@ export class TestimoniosService {
         };
     }
 
+    /**
+     * Obtiene testimonios con estado PENDIENTE para una organización específica.
+     * Solo para administradores.
+     */
+    async findPending(organizationId: string, page: number, limit: number): Promise<{ data: Testimonio[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
+        // Validar si la organización existe (opcional, ya se valida en otros métodos)
+        const organization = await this.organizationRepo.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
+        }
+
+        page = page && page > 0 ? page : 1;
+        limit = limit && limit > 0 ? limit : 20;
+
+        const [items, total] = await this.repo.findPublicWithFilters({
+            organization_id: organizationId,
+            status: Status.PENDIENTE,
+            page,
+            limit,
+        });
+
+        return {
+            data: items,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
 }
