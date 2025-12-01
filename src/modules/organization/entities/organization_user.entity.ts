@@ -20,7 +20,7 @@ export class OrganizationUser {
   @Column({ type: "enum", enum: Role, default: Role.EDITOR })
   role: Role;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'boolean', default: false })
   is_active: boolean;
 
   @CreateDateColumn()

@@ -5,12 +5,20 @@ export class CreateOrganizationDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description: string;
 }
 
 export class UpdateOrganizationDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description: string;
 }
 
 export class AddOrganizationMemberDto {

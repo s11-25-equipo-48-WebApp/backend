@@ -12,3 +12,9 @@
   "password": "password123"
 }
 ```
+
+## commands
+
+``` bash
+bashnest g resource user
+```

@@ -38,10 +38,46 @@ export class OrganizationService {
         private readonly authService: AuthService, // Inyectar AuthService
     ) { }
 
+    async getUserOrganizationsWithMembers(userId: string): Promise<any[]> {
+        const organizationUsers = await this.organizationUserRepository.find({
+            where: { user: { id: userId } },
+            relations: ['organization', 'organization.members', 'organization.members.user', 'organization.members.user.profile'],
+        });
+
+        if (!organizationUsers || organizationUsers.length === 0) {
+            return [];
+        }
+
+        return organizationUsers.map(ou => {
+            const org = ou.organization;
+            const members = org.members.map(memberOu => ({
+                id: memberOu.user.id,
+                email: memberOu.user.email,
+                name: memberOu.user.name || null,
+                bio: memberOu.user.profile?.bio || null,
+                avatarUrl: memberOu.user.profile?.avatar_url || null,
+                role: memberOu.role,
+                is_active: memberOu.user.is_active,
+                createdAt: memberOu.user.created_at,
+            }));
+
+            return {
+                id: org.id,
+                name: org.name,
+                description: org.description,
+                role: ou.role, // Rol del usuario actual en esta organización
+                editors: members.filter(m => m.role === Role.EDITOR).length,
+                members: members.length,
+                createdAt: org.createdAt,
+                allMembers: members, // Opcional: para tener todos los detalles de los miembros si se necesitan
+            };
+        });
+    }
+
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: organizationId },
-            // Ya no cargamos la relación 'members' aquí
+            relations: ['members', 'members.user', 'members.user.profile'], // Cargar miembros aquí también
         });
 
         if (!organization) {
@@ -67,6 +103,7 @@ export class OrganizationService {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
         }
         organization.name = updateDto.name;
+        organization.description = updateDto.description;
         return this.organizationRepository.save(organization);
     }
 
@@ -94,7 +131,7 @@ export class OrganizationService {
 
         // Revisar si ya existe una relación para evitar duplicados
         if (existingMember) {
-          throw new BadRequestException('El usuario ya es miembro de esta organización.');
+            throw new BadRequestException('El usuario ya es miembro de esta organización.');
         }
 
         const newMember = this.organizationUserRepository.create({
@@ -245,8 +282,15 @@ export class OrganizationService {
             throw new BadRequestException('El usuario ya pertenece a una organización.');
         }
 
+        // Verificar si ya existe una organización con el mismo nombre
+        const existingOrganizationByName = await this.organizationRepository.findOneBy({ name: createOrganizationDto.name });
+        if (existingOrganizationByName) {
+            throw new BadRequestException('Ya existe una organización con este nombre.');
+        }
+
         const organization = this.organizationRepository.create({
             name: createOrganizationDto.name,
+            description: createOrganizationDto.description,
         });
         await this.organizationRepository.save(organization);
 
@@ -283,6 +327,7 @@ export class OrganizationService {
         const organizationsPayload = userOrganizations.map(ou => ({
             id: ou.organization.id,
             name: ou.organization.name,
+            description: ou.organization.description,
             role: ou.role,
         }));
 
@@ -314,4 +359,99 @@ export class OrganizationService {
         return { organizations: organizationsPayload, newAccessToken, newRefreshToken };
     }
 
+    /**
+     * Obtiene todas las solicitudes de unión pendientes (usuarios inactivos) para una organización.
+     * @param organizationId El ID de la organización.
+     * @returns Una lista de objetos OrganizationMemberDto para usuarios pendientes.
+     */
+    async getPendingJoinRequests(organizationId: string): Promise<OrganizationMemberDto[]> {
+        const pendingMembers = await this.organizationUserRepository.find({
+            where: {
+                organization: { id: organizationId },
+                is_active: false,
+            },
+            relations: ['user', 'user.profile'],
+        });
+
+        if (!pendingMembers || pendingMembers.length === 0) {
+            return []; // O lanzar un NotFoundException si no hay solicitudes pendientes, según la lógica de negocio deseada
+        }
+
+        return pendingMembers.map(member => ({
+            id: member.user.id,
+            email: member.user.email,
+            name: member.user.name || null,
+            bio: member.user.profile?.bio || null,
+            avatarUrl: member.user.profile?.avatar_url || null,
+            role: member.role,
+            is_active: member.is_active, // Usar member.is_active para mostrar el estado correcto
+            createdAt: member.createdAt,
+        }));
+    }
+
+    /**
+     * Aprueba una solicitud de unión, activando al miembro de la organización.
+     * @param organizationId El ID de la organización.
+     * @param userId El ID del usuario cuya solicitud se va a aprobar.
+     * @returns El objeto OrganizationUser actualizado.
+     */
+    async approveJoinRequest(organizationId: string, userId: string): Promise<OrganizationUser> {
+        const member = await this.organizationUserRepository.findOne({
+            where: {
+                organization: { id: organizationId },
+                user: { id: userId },
+                is_active: false, // Solo aprobar solicitudes pendientes
+            },
+        });
+
+        if (!member) {
+            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+        }
+
+        member.is_active = true; // Activar al miembro
+        return this.organizationUserRepository.save(member);
+    }
+
+    /**
+     * Rechaza una solicitud de unión, eliminando al miembro de la organización.
+     * @param organizationId El ID de la organización.
+     * @param userId El ID del usuario cuya solicitud se va a rechazar.
+     */
+    async rejectJoinRequest(organizationId: string, userId: string): Promise<void> {
+        const result = await this.organizationUserRepository.delete({
+            organization: { id: organizationId },
+            user: { id: userId },
+            is_active: false, // Solo rechazar solicitudes pendientes
+        });
+
+        if (result.affected === 0) {
+            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+        }
+    }
+
+    /**
+     * Obtiene una lista pública de todas las organizaciones con su ID, nombre y descripción.
+     * Este endpoint no requiere autenticación.
+     * @returns Una lista de objetos con id, name y description de cada organización.
+     */
+    async findAllOrganizationsPublic(page: number = 1, limit: number = 20): Promise<{ data: { id: string; name: string; description: string }[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
+        const skip = (page - 1) * limit;
+
+        const [organizations, total] = await this.organizationRepository.findAndCount({
+            select: ['id', 'name', 'description'],
+            take: limit,
+            skip: skip,
+            order: { name: 'ASC' }, // Ordenar por nombre para consistencia
+        });
+
+        return {
+            data: organizations,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
 }

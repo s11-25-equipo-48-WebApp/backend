@@ -198,4 +198,21 @@ export class TestimoniosController {
     }
     return this.testimoniosService.findPublic(query);
   }
+
+  @Get('pending')
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener testimonios pendientes',
+    description: 'Obtener una lista paginada de testimonios con estado PENDIENTE. Solo accesible para administradores y superadministradores de la organización.',
+  })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiOkResponse({ description: 'Lista de testimonios pendientes' })
+  async findPending(
+    @Param('organizationId') organizationId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.testimoniosService.findPending(organizationId, page, limit);
+  }
 }

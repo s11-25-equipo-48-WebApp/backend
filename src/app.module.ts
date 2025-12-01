@@ -12,6 +12,7 @@ import { TestimoniosModule } from './modules/testimonios/testimonios.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { OrganizationModule } from "./modules/organization/organization.module";
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { OrganizationModule } from "./modules/organization/organization.module";
     CategoriesModule,
     TagsModule,
     forwardRef(() => OrganizationModule),
+    UserModule,
   ],
   controllers: [AppController],
   providers: [

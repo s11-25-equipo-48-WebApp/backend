@@ -11,7 +11,6 @@ import { AuthToken } from "./entities/authToken.entity";
 //import { Role } from "./entities/enums";
 import { Organization } from "../organization/entities/organization.entity";
 import { OrganizationUser } from "../organization/entities/organization_user.entity";
-import { Role } from "../organization/entities/enums";
 
 @Injectable()
 export class AuthService {

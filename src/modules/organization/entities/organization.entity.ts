@@ -13,6 +13,9 @@ export class Organization {
   @Column({ unique: true })
   name: string;
 
+  @Column({ nullable: true })
+  description: string;
+
   @OneToMany(() => OrganizationUser, (ou) => ou.organization)
   members: OrganizationUser[];
 
