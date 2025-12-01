@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn, Unique, CreateDateColumn } from 'typeorm';
 import { Testimonio } from '../../testimonios/entities/testimonio.entity';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 
@@ -17,4 +17,7 @@ export class Category {
 
   @OneToMany(() => Testimonio, (t) => (t as any).category)
   testimonios: Testimonio[];
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

@@ -73,12 +73,16 @@ export class TestimoniosService {
             organization: organization, // Asociar el testimonio con la organización
         });
 
-        // Lógica para determinar el estado inicial del testimonio
-        // userOrg ya está definido al inicio del método
+        // ==========================================
+        // LÓGICA DE APROBACIÓN AUTOMÁTICA BASADA EN ROLES
+        // ==========================================
+        // - ADMIN y SUPERADMIN: El testimonio se crea con estado APROBADO automáticamente
+        // - EDITOR y VISITOR: El testimonio se crea con estado PENDIENTE y requiere aprobación manual
+        // ==========================================
         const isAdminOrSuperAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
         entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
 
-        // Si se aprueba automáticamente, establecer approved_by y approved_at
+        // Si se aprueba automáticamente (ADMIN/SUPERADMIN), registrar quién y cuándo lo aprobó
         if (entity.status === Status.APROBADO) {
             entity.approved_by = user.id;
             entity.approved_at = new Date();
