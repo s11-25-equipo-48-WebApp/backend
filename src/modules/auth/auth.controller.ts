@@ -37,7 +37,7 @@ export class AuthController {
       httpOnly: true,
       secure: isProd,                     // https en prod
       sameSite: isProd ? 'none' : 'lax',  // none para frontend vercel
-      path: '/api/v1/auth/refresh',
+      path: '/',
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
