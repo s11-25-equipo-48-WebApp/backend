@@ -9,4 +9,5 @@ export class OrganizationMemberDto {
     role: Role;
     is_active: boolean;
     createdAt: Date;
+    testimonioCount?: number;
 }

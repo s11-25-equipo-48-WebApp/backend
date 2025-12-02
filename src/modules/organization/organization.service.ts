@@ -231,16 +231,32 @@ export class OrganizationService {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada o sin miembros.`);
         }
 
-        return members.map(member => ({
-            id: member.user.id,
-            email: member.user.email,
-            name: member.user.name || null,
-            bio: member.user.profile?.bio || null,
-            avatarUrl: member.user.profile?.avatar_url || null,
-            role: member.role,
-            is_active: member.user.is_active,
-            createdAt: member.user.created_at,
-        }));
+        // Obtener el conteo de testimonios aprobados para cada miembro
+        const membersWithCount = await Promise.all(
+            members.map(async (member) => {
+                const testimonioCount = await this.testimoniosRepository.count({
+                    where: {
+                        author: { id: member.user.id },
+                        organization: { id: organizationId },
+                        status: Status.APROBADO,
+                    },
+                });
+
+                return {
+                    id: member.user.id,
+                    email: member.user.email,
+                    name: member.user.name || null,
+                    bio: member.user.profile?.bio || null,
+                    avatarUrl: member.user.profile?.avatar_url || null,
+                    role: member.role,
+                    is_active: member.user.is_active,
+                    createdAt: member.user.created_at,
+                    testimonioCount,
+                };
+            })
+        );
+
+        return membersWithCount;
     }
 
     async getOrganizationMemberDetails(organizationId: string, userId: string): Promise<OrganizationMemberDto> {
@@ -253,6 +269,15 @@ export class OrganizationService {
             throw new NotFoundException(`Miembro con ID de usuario ${userId} no encontrado en la organización ${organizationId}.`);
         }
 
+        // Obtener el conteo de testimonios aprobados del miembro
+        const testimonioCount = await this.testimoniosRepository.count({
+            where: {
+                author: { id: userId },
+                organization: { id: organizationId },
+                status: Status.APROBADO,
+            },
+        });
+
         // Mapear a OrganizationMemberDto para una respuesta limpia sin el ID de la organización y con los detalles del usuario.
         return {
             id: member.user.id,
@@ -263,6 +288,7 @@ export class OrganizationService {
             role: member.role,
             is_active: member.user.is_active,
             createdAt: member.user.created_at,
+            testimonioCount,
         };
     }
 

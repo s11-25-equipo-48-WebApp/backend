@@ -412,6 +412,7 @@ export class OrganizationController {
         role: 'EDITOR',
         is_active: true,
         createdAt: '2025-11-26T01:00:00.000Z',
+        testimonioCount: 12,
       },
     },
   })
@@ -445,6 +446,7 @@ export class OrganizationController {
           role: 'ADMIN',
           is_active: true,
           createdAt: '2025-11-26T01:00:00.000Z',
+          testimonioCount: 15,
         },
         {
           id: 'uuid-user-2',
@@ -455,6 +457,7 @@ export class OrganizationController {
           role: 'EDITOR',
           is_active: true,
           createdAt: '2025-11-26T01:00:00.000Z',
+          testimonioCount: 8,
         },
       ],
     },
