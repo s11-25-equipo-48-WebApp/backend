@@ -13,6 +13,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { OrganizationModule } from "./modules/organization/organization.module";
 import { UserModule } from './modules/user/user.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UserModule } from './modules/user/user.module';
     TagsModule,
     forwardRef(() => OrganizationModule),
     UserModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -40,5 +42,5 @@ import { UserModule } from './modules/user/user.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
 
