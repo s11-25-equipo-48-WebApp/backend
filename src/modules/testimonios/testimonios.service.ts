@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { In, Repository } from 'typeorm';
+import { In, Repository, IsNull } from 'typeorm';
 import { TestimonioRepository } from './repository/testimonio.repository';
 import { CreateTestimonioDto } from './dto/create-testimonio.dto';
 import { Testimonio } from './entities/testimonio.entity';
@@ -33,7 +33,7 @@ export class TestimoniosService {
      * Crea un testimonio.
      * Estado inicial: 'pending'.
      */
-    async create(dto: CreateTestimonioDto, user: RequestWithUser['user'], organizationId: string): Promise<Testimonio> {
+    async create(dto: CreateTestimonioDto, user: RequestWithUser["user"], organizationId: string): Promise<Testimonio> {
         const userOrg = user.organizations.find(org => org.id === organizationId);
         if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para crear testimonios en esta organización.');
@@ -100,7 +100,7 @@ export class TestimoniosService {
     async update(
         id: string,
         dto: UpdateTestimonioDto,
-        user: RequestWithUser['user'],
+        user: RequestWithUser["user"],
         organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
         const userOrg = user.organizations.find(org => org.id === organizationId);
@@ -206,7 +206,7 @@ export class TestimoniosService {
     async updateStatus(
         id: string,
         dto: UpdateStatusDto,
-        user: RequestWithUser['user'],
+        user: RequestWithUser["user"],
         organizationId: string, // Añadir organizationId
     ): Promise<Testimonio> {
         const userOrg = user.organizations.find(org => org.id === organizationId);
@@ -344,7 +344,7 @@ export class TestimoniosService {
     * - Marca deleted_at.
     * - Registra audit_log con diff (before/after).
     */
-    async softDelete(id: string, user: RequestWithUser['user'], organizationId: string): Promise<{ id: string; deleted_at: Date }> {
+    async softDelete(id: string, user: RequestWithUser["user"], organizationId: string): Promise<{ id: string; deleted_at: Date }> {
         const userOrg = user.organizations.find(org => org.id === organizationId);
         //  buscar (ya excluye borrados)
         if (!user || !userOrg) {
@@ -399,6 +399,14 @@ export class TestimoniosService {
 
         //respuesta: id y deleted_at
         return { id: saved.id, deleted_at: saved.deleted_at! };
+    }
+
+    async findApprovedPublicById(id: string, organizationId: string): Promise<Testimonio | null> {
+        const testimonio = await this.repo.findOneById(id, organizationId);
+        if (testimonio && testimonio.status === Status.APROBADO) {
+            return testimonio;
+        }
+        return null;
     }
 
     async findPublic(query: GetTestimoniosQueryDto): Promise<{ data: Testimonio[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
