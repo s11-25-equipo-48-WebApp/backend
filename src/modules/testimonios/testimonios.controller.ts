@@ -215,4 +215,21 @@ export class TestimoniosController {
   ) {
     return this.testimoniosService.findPending(organizationId, page, limit);
   }
+
+  // ver testimonio por id
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Obtener testimonio por ID',
+    description: 'Obtener un testimonio por su ID. Solo accesible para administradores y superadministradores de la organización.',
+  })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
+  @ApiOkResponse({ description: 'Testimonio' })
+  async findById(
+    @Param('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.testimoniosService.findById(id, organizationId);
+  }
 }

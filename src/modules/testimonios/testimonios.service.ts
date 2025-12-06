@@ -16,6 +16,7 @@ import { Tag } from 'src/modules/tags/entities/tag.entity';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
 import { Role, Status } from '../organization/entities/enums';
+import { UserProfile } from '../auth/entities/userProfile.entity';
 
 @Injectable()
 export class TestimoniosService {
@@ -462,5 +463,34 @@ export class TestimoniosService {
                 totalPages: Math.ceil(total / limit),
             },
         };
+    }
+
+    async findById(id: string, organizationId: string): Promise<Testimonio> {
+
+        // enviar datos sin la password
+        // const testimonio = await this.repo.findOneById(id, organizationId);
+        // if (!testimonio) {
+        //     throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+        // }
+        const testimonio = await this.repo.findOneById(id, organizationId);
+        if (!testimonio) {
+            throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
+        }
+        
+        const authorWithoutPasswordHash = {
+            id: testimonio.author.id,
+            email: testimonio.author.email,
+            name: testimonio.author.name,
+            is_active: testimonio.author.is_active,
+            created_at: testimonio.author.created_at,
+            updated_at: testimonio.author.updated_at,
+            password_hash: '',
+            profile: testimonio.author.profile,
+            testimonials: testimonio.author.testimonials,
+            tokens: testimonio.author.tokens,
+            organizations: testimonio.author.organizations,
+        };
+
+        return { ...testimonio, author: authorWithoutPasswordHash };
     }
 }
