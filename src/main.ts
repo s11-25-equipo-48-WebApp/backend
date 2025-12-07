@@ -14,6 +14,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  // Validations
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -22,38 +23,36 @@ async function bootstrap() {
     }),
   );
 
+  // GLOBAL PREFIX
   app.setGlobalPrefix('api/v1');
 
+  // CORS FIX PARA SWAGGER
   app.enableCors({
-    origin: [
-      'https://cms-testimonials.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      '*',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    origin: '*',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
+  // -------- SWAGGER CONFIG --------
   const opts = new DocumentBuilder()
     .setTitle('CMS API')
     .setDescription('Documentación API para el CMS')
     .setVersion('1.0')
     .addTag('cms')
     .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'access-token',
     )
     .build();
 
-  const doc = SwaggerModule.createDocument(app, opts);
+  const doc = SwaggerModule.createDocument(app, opts, {
+    ignoreGlobalPrefix: false,
+  });
+
+  doc.servers = [{ url: 'http://localhost:3002' }];
+
   SwaggerModule.setup('docs', app, doc);
 
   const port = configService.get<number>('PORT') || 3002;

@@ -36,18 +36,8 @@ export class AnalyticsService {
         organizationId: string,
         userId?: string,
     ): Promise<AnalyticsEvent> {
-        // Validar que el testimonio existe si se proporciona
-        if (dto.testimonio_id) {
-            const testimonio = await this.testimonioRepo.findOne({
-                where: { id: dto.testimonio_id },
-            });
-            if (!testimonio) {
-                throw new NotFoundException(
-                    `Testimonio con ID ${dto.testimonio_id} no encontrado`,
-                );
-            }
-        }
-
+        // Crear el evento directamente sin validar el testimonio
+        // (la validación se puede agregar después si es necesaria)
         const event = this.analyticsRepo.create({
             id: uuidv4(),
             event_type: dto.event_type,
@@ -76,97 +66,82 @@ export class AnalyticsService {
         startDate?: Date,
         endDate?: Date,
     ): Promise<AnalyticsMetricsDto> {
-        // Construir filtro de fecha
-        const dateFilter: any = {};
-        if (startDate || endDate) {
-            dateFilter.created_at = Between(
-                startDate || new Date('1970-01-01'),
-                endDate || new Date(),
-            );
+        try {
+            // Query builder para testimonios
+            let testimoniosQuery = this.testimonioRepo
+                .createQueryBuilder('t')
+                .where('t.organization_id = :orgId', { orgId: organizationId })
+                .andWhere('t.deleted_at IS NULL');
+
+            if (startDate) {
+                testimoniosQuery = testimoniosQuery.andWhere('t.created_at >= :startDate', { startDate });
+            }
+            if (endDate) {
+                testimoniosQuery = testimoniosQuery.andWhere('t.created_at <= :endDate', { endDate });
+            }
+
+            // Testimonios publicados
+            const testimoniosPublicados = await testimoniosQuery
+                .clone()
+                .andWhere('t.status = :status', { status: Status.APROBADO })
+                .getCount();
+
+            // Testimonios recibidos (total)
+            const testimoniosRecibidos = await testimoniosQuery.getCount();
+
+            // Calcular tasa de aprobación
+            const tasaAprobacion =
+                testimoniosRecibidos > 0
+                    ? Math.round((testimoniosPublicados / testimoniosRecibidos) * 100)
+                    : 0;
+
+            // Query builder para eventos
+            let eventsQuery = this.analyticsRepo
+                .createQueryBuilder('e')
+                .where('e.organization_id = :orgId', { orgId: organizationId });
+
+            if (startDate) {
+                eventsQuery = eventsQuery.andWhere('e.created_at >= :startDate', { startDate });
+            }
+            if (endDate) {
+                eventsQuery = eventsQuery.andWhere('e.created_at <= :endDate', { endDate });
+            }
+
+            // Contar eventos de consentimiento
+            const consentGiven = await eventsQuery
+                .clone()
+                .andWhere('e.event_type = :type', { type: 'consent_given' })
+                .getCount();
+
+            const consentRevoked = await eventsQuery
+                .clone()
+                .andWhere('e.event_type = :type', { type: 'consent_revoked' })
+                .getCount();
+
+            // Calcular tasa de consentimiento
+            const totalConsentEvents = consentGiven + consentRevoked;
+            const tasaConsentimiento =
+                totalConsentEvents > 0
+                    ? Math.round((consentGiven / totalConsentEvents) * 100)
+                    : 0;
+
+            // Visualizaciones
+            const visualizaciones = await eventsQuery
+                .clone()
+                .andWhere('e.event_type = :type', { type: 'view' })
+                .getCount();
+
+            return {
+                testimonios_publicados: testimoniosPublicados,
+                testimonios_recibidos: testimoniosRecibidos,
+                tasa_aprobacion: tasaAprobacion,
+                tasa_consentimiento: tasaConsentimiento,
+                visualizaciones: visualizaciones,
+            };
+        } catch (error) {
+            console.error('Error en getMetrics:', error);
+            throw error;
         }
-
-        // Testimonios publicados (aprobados)
-        const testimoniosPublicados = await this.testimonioRepo.count({
-            where: {
-                organization: { id: organizationId },
-                status: Status.APROBADO,
-                deleted_at: null,
-                ...dateFilter,
-            },
-        });
-
-        // Testimonios recibidos (total)
-        const testimoniosRecibidos = await this.testimonioRepo.count({
-            where: {
-                organization: { id: organizationId },
-                deleted_at: null,
-                ...dateFilter,
-            },
-        });
-
-        // Testimonios rechazados
-        const testimoniosRechazados = await this.testimonioRepo.count({
-            where: {
-                organization: { id: organizationId },
-                status: Status.RECHAZADO,
-                deleted_at: null,
-                ...dateFilter,
-            },
-        });
-
-        // Calcular tasa de aprobación
-        const tasaAprobacion =
-            testimoniosRecibidos > 0
-                ? Math.round((testimoniosPublicados / testimoniosRecibidos) * 100)
-                : 0;
-
-        // Contar eventos de consentimiento
-        const eventFilter: any = {
-            organization_id: organizationId,
-        };
-        if (startDate || endDate) {
-            eventFilter.created_at = Between(
-                startDate || new Date('1970-01-01'),
-                endDate || new Date(),
-            );
-        }
-
-        const consentGiven = await this.analyticsRepo.count({
-            where: {
-                ...eventFilter,
-                event_type: 'consent_given',
-            },
-        });
-
-        const consentRevoked = await this.analyticsRepo.count({
-            where: {
-                ...eventFilter,
-                event_type: 'consent_revoked',
-            },
-        });
-
-        // Calcular tasa de consentimiento
-        const totalConsentEvents = consentGiven + consentRevoked;
-        const tasaConsentimiento =
-            totalConsentEvents > 0
-                ? Math.round((consentGiven / totalConsentEvents) * 100)
-                : 0;
-
-        // Visualizaciones
-        const visualizaciones = await this.analyticsRepo.count({
-            where: {
-                ...eventFilter,
-                event_type: 'view',
-            },
-        });
-
-        return {
-            testimonios_publicados: testimoniosPublicados,
-            testimonios_recibidos: testimoniosRecibidos,
-            tasa_aprobacion: tasaAprobacion,
-            tasa_consentimiento: tasaConsentimiento,
-            visualizaciones: visualizaciones,
-        };
     }
 
     /**
