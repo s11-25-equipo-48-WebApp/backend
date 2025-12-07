@@ -23,7 +23,7 @@ export class TestimonioRepository {
     if (organizationId) {
       whereCondition.organization = { id: organizationId };
     }
-    return this.repo.findOne({ where: whereCondition });
+    return this.repo.findOne({ where: whereCondition, relations: ['author'] });
   }
 
 async softDelete(entity: Testimonio) {

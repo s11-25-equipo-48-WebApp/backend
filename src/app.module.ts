@@ -14,6 +14,7 @@ import { TagsModule } from './modules/tags/tags.module';
 import { OrganizationModule } from "./modules/organization/organization.module";
 import { UserModule } from './modules/user/user.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { EmbedModule } from "./modules/embedb/embed.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     forwardRef(() => OrganizationModule),
     UserModule,
     AnalyticsModule,
+    EmbedModule,
   ],
   controllers: [AppController],
   providers: [
