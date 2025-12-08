@@ -28,9 +28,13 @@ async function bootstrap() {
 
   // CORS FIX PARA SWAGGER
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', '*'],
+    origin: (origin, callback) => {
+      // Permite todos los orígenes
+      callback(null, true);
+    },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // si necesitas enviar cookies o auth headers
   });
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
