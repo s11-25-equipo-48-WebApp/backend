@@ -26,15 +26,22 @@ async function bootstrap() {
   // GLOBAL PREFIX
   app.setGlobalPrefix('api/v1');
 
-  // CORS FIX PARA SWAGGER
+  const whitelist = [
+    'http://localhost:3000',
+    'https://cms-testimonials.vercel.app',
+  ];
+
   app.enableCors({
     origin: (origin, callback) => {
-      // Permite todos los orígenes
-      callback(null, true);
+      if (!origin || whitelist.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // si necesitas enviar cookies o auth headers
+    credentials: true,
   });
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
