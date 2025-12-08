@@ -20,11 +20,17 @@ export class TestimonioRepository {
 
   findOneById(id: string, organizationId?: string) {
     const whereCondition: any = { id, deleted_at: IsNull() };
+
     if (organizationId) {
       whereCondition.organization = { id: organizationId };
     }
-    return this.repo.findOne({ where: whereCondition, relations: ['author'] });
+
+    return this.repo.findOne({
+      where: whereCondition,
+      relations: ['created_by_user', 'category', 'tags', 'organization'],
+    });
   }
+
 
   async softDelete(entity: Testimonio) {
     entity.deleted_at = new Date();
@@ -53,6 +59,7 @@ export class TestimonioRepository {
     const qb = this.repo.createQueryBuilder('t')
       .leftJoinAndSelect('t.category', 'category')
       .leftJoinAndSelect('t.tags', 'tag')
+      .leftJoinAndSelect('t.created_by_user', 'created_by_user')
       .where('t.deleted_at IS NULL')
       .distinct(true);
 
