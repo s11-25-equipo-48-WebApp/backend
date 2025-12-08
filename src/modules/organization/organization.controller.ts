@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, Res, HttpCode, HttpStatus, Logger } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, Res, HttpCode, HttpStatus, Logger, ParseUUIDPipe } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags, ApiBody, ApiParam, ApiBadRequestResponse } from "@nestjs/swagger";
 import { OrganizationService } from "./organization.service";
 import { JwtAuthGuard } from "src/jwt/jwt.guard";
@@ -186,7 +186,7 @@ export class OrganizationController {
     },
   })
   async getOrganizationDetails(
-    @Param('organizationId') organizationId: string,
+    @Param('organizationId', new ParseUUIDPipe()) organizationId: string,
     @Req() req
   ) {
     // La verificación de roles y pertenencia a la organización ahora se maneja por RolesGuard
