@@ -194,7 +194,7 @@ export class AnalyticsService {
         }
 
         if (event_type) {
-            queryBuilder.andWhere('event.event_type = :eventType', { event_type });
+            queryBuilder.andWhere('event.event_type = :eventType', { eventType: event_type });
         }
 
         if (search) {
