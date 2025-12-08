@@ -53,6 +53,10 @@ export class Testimonio {
   @Column({ type: 'uuid', nullable: true })
   created_by_user_id?: string | null;
 
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'created_by_user_id' })
+  created_by_user: User;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   approved_by?: string | null;
 
