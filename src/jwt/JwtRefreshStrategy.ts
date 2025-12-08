@@ -9,14 +9,16 @@ import { ConfigService } from '@nestjs/config';
 import { AuthToken } from 'src/modules/auth/entities/authToken.entity';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   private readonly logger = new Logger(JwtRefreshStrategy.name);
 
   constructor(
     @InjectRepository(AuthToken)
     private readonly authTokenRepository: Repository<AuthToken>,
-
-    private readonly configService: ConfigService, 
+    private readonly configService: ConfigService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -38,14 +40,23 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Refresh token no proporcionado');
     }
 
+    // ======================================
+    // 1. Buscar el token por payload.tokenId
+    // ======================================
     const tokenInDb = await this.authTokenRepository.findOne({
-      where: { user: { id: payload.sub }, revoked: false },
+      where: { id: payload.tokenId, revoked: false },
+      relations: ['user'],
     });
 
     if (!tokenInDb) {
-      throw new UnauthorizedException('Refresh token inválido o revocado');
+      throw new UnauthorizedException(
+        'Refresh token inválido, revocado o no encontrado',
+      );
     }
 
+    // ======================================
+    // 2. Comparar el token recibido con el hash
+    // ======================================
     const isValid = await bcrypt.compare(
       refreshToken,
       tokenInDb.refresh_token_hash,
@@ -55,16 +66,14 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Refresh token inválido');
     }
 
+    // ======================================
+    // 3. Devolver usuario + el token usado
+    // ======================================
     return {
-      id: payload.sub,
-      email: payload.email,
-      organization: payload.organization
-        ? {
-            id: payload.organization.id,
-            role: payload.organization.role,
-          }
-        : undefined,
+      id: tokenInDb.user.id,
+      email: tokenInDb.user.email,
       authToken: tokenInDb,
+      organizations: payload.organizations ?? [],
     };
   }
 }
