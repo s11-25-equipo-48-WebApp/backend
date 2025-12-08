@@ -62,8 +62,6 @@ async function bootstrap() {
     ignoreGlobalPrefix: false,
   });
 
-  doc.servers = [{ url: 'http://localhost:3002' }];
-
   SwaggerModule.setup('docs', app, doc);
 
   const port = configService.get<number>('PORT') || 3002;
