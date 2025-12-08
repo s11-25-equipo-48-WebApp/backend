@@ -11,9 +11,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
-    // 🛑 PROTECCIÓN FUNDAMENTAL
+    // Protección para evitar ERR_HTTP_HEADERS_SENT
     if (res.headersSent) {
-      this.logger.error('Headers already sent, skipping response.', { exception });
+      this.logger.error(
+        'Headers already sent, skipping response. Exception: ' + JSON.stringify(exception)
+      );
       return;
     }
 
@@ -33,7 +35,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
     };
 
-    this.logger.error('Unhandled exception', JSON.stringify({ exception, payload }));
+    this.logger.error(
+      'Unhandled exception: ' + JSON.stringify({ exception, payload })
+    );
 
     return res.status(status).json(payload);
   }
