@@ -28,9 +28,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   const whitelist = [
-    '*',
-    'http://localhost:3000',
     'https://cms-testimonials.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    '*',
   ];
 
   app.enableCors({
