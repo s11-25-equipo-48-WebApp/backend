@@ -11,6 +11,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
+    // Protección para evitar ERR_HTTP_HEADERS_SENT
+    if (res.headersSent) {
+      this.logger.error(
+        'Headers already sent, skipping response. Exception: ' + JSON.stringify(exception)
+      );
+      return;
+    }
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
 
@@ -27,7 +35,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
     };
 
-    this.logger.error('Unhandled exception', JSON.stringify({ exception, payload }));
-    res.status(status).json(payload);
+    this.logger.error(
+      'Unhandled exception: ' + JSON.stringify({ exception, payload })
+    );
+
+    return res.status(status).json(payload);
   }
 }

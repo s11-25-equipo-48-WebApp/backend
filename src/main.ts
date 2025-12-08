@@ -28,8 +28,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   const whitelist = [
-    'http://localhost:3000',
     'https://cms-testimonials.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    '*',
   ];
 
   app.enableCors({
@@ -37,6 +40,11 @@ async function bootstrap() {
 
       if (!origin) return callback(null, true);
       callback(null, true);
+      if (!origin || whitelist.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

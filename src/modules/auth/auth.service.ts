@@ -89,69 +89,90 @@ export class AuthService {
   // ====================
   // Login
   // ====================
-  async login(loginUserDto: LoginUserDto) {
-    const { email, password } = loginUserDto;
+  // dentro de AuthService
 
-    const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) throw new BadRequestException('Email o contraseña incorrectos');
+async login(loginUserDto: LoginUserDto) {
+  const { email, password } = loginUserDto;
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
+  const user = await this.usersRepository.findOne({ where: { email } });
+  if (!user) throw new BadRequestException('Email o contraseña incorrectos');
 
-    // Obtener todas las organizaciones del usuario
-    const userOrganizations = await this.organizationUserRepository.find({
-      where: { user: { id: user.id } },
-      relations: ['organization'],
-    });
+  const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
+  if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
 
-    const organizationsPayload = userOrganizations.map(ou => ({
-      id: ou.organization.id,
-      name: ou.organization.name,
-      role: ou.role,
-    }));
+  // Obtener todas las organizaciones del usuario
+  const userOrganizations = await this.organizationUserRepository.find({
+    where: { user: { id: user.id } },
+    relations: ['organization'],
+  });
 
-    await this.authTokenRepository.update(
-      { user: { id: user.id }, revoked: false },
-      { revoked: true },
-    );
-    await this.authTokenRepository.delete({
-      user: { id: user.id },
-      expires_at: LessThan(new Date()),
-    });
+  const organizationsPayload = userOrganizations.map(ou => ({
+    id: ou.organization.id,
+    name: ou.organization.name,
+    role: ou.role,
+  }));
 
-    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
+  // Revocar tokens anteriores y limpiar expirados
+  await this.authTokenRepository.update(
+    { user: { id: user.id }, revoked: false },
+    { revoked: true },
+  );
+  await this.authTokenRepository.delete({
+    user: { id: user.id },
+    expires_at: LessThan(new Date()),
+  });
 
-    const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
-    });
+  // 1) Crear registro de token vacío para obtener tokenEntity.id
+  const tokenEntity = this.authTokenRepository.create({
+    refresh_token_hash: '', // placeholder
+    user: user,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+  await this.authTokenRepository.save(tokenEntity); // ahora tiene id
 
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
-    });
+  // 2) Preparar payloads
+  const accessPayload = {
+    sub: user.id,
+    email: user.email,
+    organizations: organizationsPayload,
+  };
 
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  const refreshPayload = {
+    sub: user.id,
+    email: user.email,
+    organizations: organizationsPayload,
+    tokenId: tokenEntity.id, // <-- clave
+  };
 
-    const tokenEntity = this.authTokenRepository.create({
-      refresh_token_hash: refreshTokenHash,
-      user: user,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-    await this.authTokenRepository.save(tokenEntity);
+  // 3) Firmar tokens
+  const accessToken = this.jwtService.sign(accessPayload, {
+    secret: this.configService.get<string>('JWT_SECRET'),
+    expiresIn: '15m',
+  });
 
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      profile: user.profile,
-      accessToken,
-      refreshToken,
-      estado: user.is_active ? 'activo' : 'pendiente',
-      createdAt: user.created_at,
-      organizations: organizationsPayload,
-    };
-  }
+  const refreshToken = this.jwtService.sign(refreshPayload, {
+    secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    expiresIn: '7d',
+  });
+
+  // 4) Hashear el refresh token y actualizar el registro
+  const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  tokenEntity.refresh_token_hash = refreshTokenHash;
+  await this.authTokenRepository.save(tokenEntity);
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    profile: user.profile,
+    accessToken,
+    refreshToken,
+    estado: user.is_active ? 'activo' : 'pendiente',
+    createdAt: user.created_at,
+    organizations: organizationsPayload,
+  };
+}
+
 
   async findUserByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
@@ -160,60 +181,65 @@ export class AuthService {
   // ====================
   // Refresh token
   // ====================
-  async refresh(user: any) {
-    this.logger.debug(`Iniciando refresh para el usuario: ${user.id}`);
+ async refresh(user: any) {
+  this.logger.debug(`Iniciando refresh para el usuario: ${user.id}`);
 
-    const tokenInDb = user.authToken;
-    if (!tokenInDb) {
-      throw new UnauthorizedException('Token de refresco no validado por la estrategia.');
-    }
-
-    tokenInDb.revoked = true;
-    await this.authTokenRepository.save(tokenInDb);
-
-    // Obtener todas las organizaciones del usuario para el refresh token
-    const userOrganizations = await this.organizationUserRepository.find({
-      where: { user: { id: user.id } },
-      relations: ['organization'],
-    });
-
-    const organizationsPayload = userOrganizations.map(ou => ({
-      id: ou.organization.id,
-      name: ou.organization.name,
-      role: ou.role,
-    }));
-
-    const payload = { sub: user.id, email: user.email, organizations: organizationsPayload };
-
-    const newAccessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
-    });
-
-    const newRefreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
-    });
-
-    const newHash = await bcrypt.hash(newRefreshToken, 10);
-
-    const newTokenEntity = this.authTokenRepository.create({
-      refresh_token_hash: newHash,
-      user: user,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    await this.authTokenRepository.save(newTokenEntity);
-
-    return {
-      id: user.id,
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      estado: user.is_active ? 'activo' : 'pendiente',
-      createdAt: user.created_at,
-      organizations: organizationsPayload,
-    };
+  const tokenInDb = user.authToken;
+  if (!tokenInDb) {
+    throw new UnauthorizedException('Token de refresco no validado por la estrategia.');
   }
+
+  tokenInDb.revoked = true;
+  await this.authTokenRepository.save(tokenInDb);
+
+  // Obtener organizaciones
+  const userOrganizations = await this.organizationUserRepository.find({
+    where: { user: { id: user.id } },
+    relations: ['organization'],
+  });
+
+  const organizationsPayload = userOrganizations.map(ou => ({
+    id: ou.organization.id,
+    name: ou.organization.name,
+    role: ou.role,
+  }));
+
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    organizations: organizationsPayload,
+  };
+
+  const newAccessToken = this.jwtService.sign(payload, {
+    secret: this.configService.get<string>('JWT_SECRET'),
+    expiresIn: '15m',
+  });
+
+  const newRefreshToken = this.jwtService.sign(payload, {
+    secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    expiresIn: '7d',
+  });
+
+  const newHash = await bcrypt.hash(newRefreshToken, 10);
+
+  const newTokenEntity = this.authTokenRepository.create({
+    refresh_token_hash: newHash,
+    user: user,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  await this.authTokenRepository.save(newTokenEntity);
+
+  return {
+    id: user.id,
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+    estado: user.is_active ? 'activo' : 'pendiente',
+    createdAt: user.created_at,
+    organizations: organizationsPayload,
+  };
+}
+
 
   // ====================
   // Logout
