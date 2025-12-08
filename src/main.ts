@@ -28,7 +28,7 @@ async function bootstrap() {
 
   // CORS FIX PARA SWAGGER
   app.enableCors({
-    origin: '*',
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', '*'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
