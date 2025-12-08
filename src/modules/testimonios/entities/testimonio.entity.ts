@@ -44,8 +44,14 @@ export class Testimonio {
   @Column({ type: 'varchar', length: 20 })
   media_type: 'image' | 'video' | 'none';
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  author_name?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  author_email?: string | null;
+
   @Column({ type: 'uuid', nullable: true })
-  author_id?: string | null;
+  created_by_user_id?: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   approved_by?: string | null;
@@ -69,7 +75,4 @@ export class Testimonio {
   @JoinColumn({ name: 'organization_id' })
   organization: Organization;
 
-  @ManyToOne(() => User, (user) => user.testimonials, { onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'author_id' })
-  author: User;
 }

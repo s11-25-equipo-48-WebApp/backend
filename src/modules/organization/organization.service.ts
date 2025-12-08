@@ -236,7 +236,7 @@ export class OrganizationService {
             members.map(async (member) => {
                 const testimonioCount = await this.testimoniosRepository.count({
                     where: {
-                        author: { id: member.user.id },
+                        created_by_user_id: member.user.id,
                         organization: { id: organizationId },
                         status: Status.APROBADO,
                     },
@@ -272,7 +272,7 @@ export class OrganizationService {
         // Obtener el conteo de testimonios aprobados del miembro
         const testimonioCount = await this.testimoniosRepository.count({
             where: {
-                author: { id: userId },
+                created_by_user_id: member.user.id,
                 organization: { id: organizationId },
                 status: Status.APROBADO,
             },

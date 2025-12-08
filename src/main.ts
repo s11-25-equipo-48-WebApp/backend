@@ -9,6 +9,7 @@ import { useContainer } from 'class-validator';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  console.log('[MAIN] App bootstrap iniciada');
 
   const configService = app.get(ConfigService);
 
@@ -33,16 +34,15 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || whitelist.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+
+      if (!origin) return callback(null, true);
+      callback(null, true);
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
+
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 

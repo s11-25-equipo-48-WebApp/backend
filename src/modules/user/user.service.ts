@@ -33,9 +33,9 @@ export class UserService {
 
   async findMe(userId: string): Promise<any> {
     this.logger.log(`findMe: userId: ${userId}`);
-    
+
     try {
-      const user = await this.userRepository.findOne({ 
+      const user = await this.userRepository.findOne({
         where: { id: userId },
         relations: ['profile'],
         select: {
@@ -47,11 +47,11 @@ export class UserService {
           updated_at: true,
         }
       });
-      
+
       if (!user) {
         throw new NotFoundException(`User with ID "${userId}" not found`);
       }
-      
+
       return user;
     } catch (error) {
       this.logger.error(`Error en findMe: ${error.message}`, error.stack);
@@ -61,7 +61,7 @@ export class UserService {
 
   async updateMe(userId: string, updateUserDto: UpdateUserDto): Promise<any> {
     this.logger.log(`updateMe: userId: ${userId}`);
-    
+
     try {
       // Buscar el usuario con su perfil
       const user = await this.userRepository.findOne({
@@ -89,7 +89,7 @@ export class UserService {
           if (avatar_url !== undefined) user.profile.avatar_url = avatar_url;
           if (bio !== undefined) user.profile.bio = bio;
           if (metadata !== undefined) user.profile.metadata = metadata;
-          
+
           await this.userProfileRepository.save(user.profile);
         } else {
           // Crear nuevo perfil
@@ -99,7 +99,7 @@ export class UserService {
             bio: bio || '',
             metadata: metadata || {},
           });
-          
+
           await this.userProfileRepository.save(newProfile);
         }
       }
@@ -176,7 +176,7 @@ export class UserService {
     await this.organizationUserRepository.remove(membership);
   }
 
-  async findMyTestimonios(userId: string): Promise<Testimonio[]> {
+  /*async findMyTestimonios(userId: string): Promise<Testimonio[]> {
     return this.testimonioRepository.find({
       where: { author: { id: userId } },
       relations: ['category', 'tags'], // Cargar relaciones si es necesario
@@ -201,5 +201,5 @@ export class UserService {
     }
 
     return this.testimonioRepository.save(testimonio);
-  }
+  }*/
 }

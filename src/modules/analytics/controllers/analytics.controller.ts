@@ -17,12 +17,12 @@ import {
     ApiResponse,
     ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AnalyticsService } from '../../analytics.service';
-import { GetAnalyticsQueryDto } from '../../dto/get-analytics-query.dto';
+import { AnalyticsService } from '../analytics.service';
+import { GetAnalyticsQueryDto } from '../dto/get-analytics-query.dto';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
-import { Role } from '../../../organization/entities/enums';
+import { Role } from '../../organization/entities/enums';
 
 @ApiTags('Analytics')
 @Controller('organizations/:organizationId/analytics')

@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyticsService } from './analytics.service';
-import { AnalyticsController } from './entities/controllers/analytics.controller';
+import { AnalyticsController } from './controllers/analytics.controller';
 import { AnalyticsEvent } from './entities/analytics-event.entity';
 import { Testimonio } from '../testimonios/entities/testimonio.entity';
 import { Organization } from '../organization/entities/organization.entity';
-import { AnalyticsPublicController } from './entities/controllers/analytics-public.controller';
+import { AnalyticsPublicController } from './controllers/analytics-public.controller';
 
 @Module({
     imports: [

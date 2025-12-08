@@ -35,9 +35,6 @@ export class User {
   @OneToOne(() => UserProfile, (p) => p.user)
   profile!: UserProfile;
 
-  @OneToMany(() => Testimonio, (t) => t.author)
-  testimonials!: Testimonio[];
-
   @OneToMany(() => AuthToken, (t) => t.user)
   tokens!: AuthToken[];
 

@@ -26,7 +26,7 @@ export class EmbedService {
 
         // Author and Avatar
         let authorInfoHtml = "";
-        const authorName = testimonio.author?.name || "Anónimo";
+        const authorName = testimonio.author_name || "Anónimo";
         const avatarUrl = "https://via.placeholder.com/40"; // Using a generic placeholder as avatar_url does not exist on User type
 
         authorInfoHtml = `

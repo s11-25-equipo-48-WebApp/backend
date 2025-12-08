@@ -70,8 +70,10 @@ export class TestimoniosService {
             tags,
             media_url: dto.media_url ?? null,
             media_type: dto.media_type,
-            author_id: user?.id ?? null,
-            organization: organization, // Asociar el testimonio con la organización
+            author_name: dto.author ?? null,
+            author_email: dto.email,
+            created_by_user_id: user?.id ?? null,
+            organization: organization,
         });
 
         // ==========================================
@@ -95,39 +97,34 @@ export class TestimoniosService {
 
     /**
      * Actualiza un testimonio:
-     * - Solo autor (author_id) o admin pueden editar.
+     * - Solo ADMIN o SUPERADMIN pueden editar.
      * - Registra audit_log con diff antes/después.
      */
     async update(
         id: string,
         dto: UpdateTestimonioDto,
         user: RequestWithUser["user"],
-        organizationId: string, // Añadir organizationId
+        organizationId: string,
     ): Promise<Testimonio> {
         const userOrg = user.organizations.find(org => org.id === organizationId);
-        // Buscar testimonio y validar organización
+
+        // Validar usuario y organización
         if (!user || !userOrg) {
             throw new UnauthorizedException('No autorizado para editar testimonios en esta organización.');
         }
 
-        const existing = await this.repo.findOneById(id, organizationId); // Usar organizationId para buscar
+        // Buscar testimonio
+        const existing = await this.repo.findOneById(id, organizationId);
         if (!existing) {
             throw new NotFoundException(`Testimonio con ID ${id} no encontrado en su organización.`);
         }
 
-        // Validar usuario presente
-        if (!user) {
-            throw new ForbiddenException('Authentication required to edit testimonio');
-        }
+        // SOLO admin o superadmin pueden editar
+        const isAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
 
-        // userOrg ya está definido al inicio del método
-        const isAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN; // Incluir superadmin
-        const isAuthor = existing.author_id === user.id;
-
-        // Permisos: autor, admin o superadmin
-        if (!isAdmin && !isAuthor) {
+        if (!isAdmin) {
             throw new ForbiddenException(
-                'Only the author, an admin or superadmin can edit this testimonio',
+                'Solo administradores pueden editar testimonios',
             );
         }
 
@@ -467,30 +464,11 @@ export class TestimoniosService {
 
     async findById(id: string, organizationId: string): Promise<Testimonio> {
 
-        // enviar datos sin la password
-        // const testimonio = await this.repo.findOneById(id, organizationId);
-        // if (!testimonio) {
-        //     throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
-        // }
         const testimonio = await this.repo.findOneById(id, organizationId);
         if (!testimonio) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
         }
-        
-        const authorWithoutPasswordHash = {
-            id: testimonio.author.id,
-            email: testimonio.author.email,
-            name: testimonio.author.name,
-            is_active: testimonio.author.is_active,
-            created_at: testimonio.author.created_at,
-            updated_at: testimonio.author.updated_at,
-            password_hash: '',
-            profile: testimonio.author.profile,
-            testimonials: testimonio.author.testimonials,
-            tokens: testimonio.author.tokens,
-            organizations: testimonio.author.organizations,
-        };
 
-        return { ...testimonio, author: authorWithoutPasswordHash };
+        return testimonio;
     }
 }

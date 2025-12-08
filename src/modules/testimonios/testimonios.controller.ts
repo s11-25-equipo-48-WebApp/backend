@@ -62,19 +62,20 @@ export class TestimoniosController {
         tags: ['uuid-tag-1', 'uuid-tag-2'],
         media_url: 'https://res.cloudinary.com/...',
         media_type: 'image',
-        author: 'Juan Perez',
-        status: 'pendiente', // O aprobado, según el rol del usuario
+        author_name: 'Juan Perez',
+        author_email: 'juan@example.com',
+        status: 'pendiente',
         created_at: '2025-11-21T10:00:00.000Z',
       },
     },
   })
   async create(
-    @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
+    @Param('organizationId') organizationId: string,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
     createTestimonioDto: CreateTestimonioDto,
-    @Req() req: RequestWithUser, // Añadir el decorador @Req con el tipo RequestWithUser
+    @Req() req: RequestWithUser,
   ) {
-    const created = await this.testimoniosService.create(createTestimonioDto, req.user, organizationId); // Pasar req.user al servicio
+    const created = await this.testimoniosService.create(createTestimonioDto, req.user, organizationId);
 
     return {
       id: created.id,
@@ -84,21 +85,22 @@ export class TestimoniosController {
       tags: created.tags,
       media_url: created.media_url,
       media_type: created.media_type,
-      author: created.author,
+      author_name: created.author_name,
+      author_email: created.author_email,
       status: created.status,
       created_at: created.created_at,
     };
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR) // Solo admins y editores pueden editar
-  @HttpCode(HttpStatus.OK) // Usar HttpStatus
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Editar testimonio',
     description:
-      'Editar campos permitidos del testimonio. Solo el autor o admin/superadmin puede editar. Se registra un audit_log con diff antes/después.',
+      'Editar campos permitidos del testimonio. Solo administradores y superadministradores pueden editar. Se registra un audit_log con diff antes/después.',
   })
-  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' }) // Añadir Param para organizationId
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
   @ApiBody({ type: UpdateTestimonioDto })
   @ApiOkResponse({
@@ -112,8 +114,8 @@ export class TestimoniosController {
         tags: ['uuid-tag-1', 'uuid-tag-2'],
         media_url: 'https://res.cloudinary.com/mi-cuenta/.../nueva.jpg',
         media_type: 'image',
-        author: 'Juan Pérez',
-        author_id: 'uuid-user',
+        author_name: 'Juan Pérez',
+        author_email: 'juan@example.com',
         status: 'pendiente',
         created_at: '2025-11-21T10:00:00.000Z',
         updated_at: '2025-11-22T12:00:00.000Z',
@@ -121,36 +123,46 @@ export class TestimoniosController {
     },
   })
   async update(
-    @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
+    @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() dto: UpdateTestimonioDto,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
-    const updated = await this.testimoniosService.update(id, dto, user, organizationId); // Pasar organizationId al servicio
+    const updated = await this.testimoniosService.update(id, dto, user, organizationId);
     return updated;
   }
 
   @Patch(':id/status')
-  @Roles(Role.ADMIN, Role.SUPERADMIN) // Solo admins pueden cambiar el estado
-  @HttpCode(HttpStatus.OK) // Usar HttpStatus
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cambiar estado de un testimonio',
     description:
-      'Solo admins pueden cambiar estado. Registra approved_by y approved_at. Reglas de transición aplican.',
+      'Solo admins y superadmins pueden cambiar estado. Registra approved_by y approved_at. Reglas de transición aplican.',
   })
-  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' }) // Añadir Param para organizationId
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
   @ApiBody({ type: UpdateStatusDto })
-  @ApiOkResponse({ description: 'Estado actualizado', schema: { example: { id: 'uuid-v4', status: 'aprobado' } } })
+  @ApiOkResponse({
+    description: 'Estado actualizado',
+    schema: {
+      example: {
+        id: 'uuid-v4',
+        status: 'aprobado',
+        approved_by: 'uuid-admin',
+        approved_at: '2025-11-22T12:00:00.000Z'
+      }
+    }
+  })
   async updateStatus(
-    @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
+    @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() dto: UpdateStatusDto,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
-    const updated = await this.testimoniosService.updateStatus(id, dto, user, organizationId); // Pasar organizationId al servicio
+    const updated = await this.testimoniosService.updateStatus(id, dto, user, organizationId);
     return {
       id: updated.id,
       status: updated.status,
@@ -159,38 +171,45 @@ export class TestimoniosController {
     };
   }
 
-  @Delete(':id') // Añadir endpoint para soft delete
-  @Roles(Role.ADMIN, Role.SUPERADMIN) // Solo admins pueden eliminar
+  @Delete(':id')
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Eliminar testimonio (soft delete)',
-    description: 'Marca un testimonio como eliminado lógicamente. Solo administradores pueden realizar esta acción.',
+    description: 'Marca un testimonio como eliminado lógicamente. Solo administradores y superadministradores pueden realizar esta acción.', // ✅ CAMBIO
   })
-  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' }) // Añadir Param para organizationId
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
-  @ApiOkResponse({ description: 'Testimonio eliminado lógicamente', schema: { example: { id: 'uuid-v4', deleted_at: '2025-11-22T12:00:00.000Z' } } })
+  @ApiOkResponse({
+    description: 'Testimonio eliminado lógicamente',
+    schema: {
+      example: {
+        id: 'uuid-v4',
+        deleted_at: '2025-11-22T12:00:00.000Z'
+      }
+    }
+  })
   async softDelete(
-    @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
+    @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
-    return this.testimoniosService.softDelete(id, user, organizationId); // Pasar organizationId al servicio
+    return this.testimoniosService.softDelete(id, user, organizationId);
   }
 
-  @Get('public') // Cambiar el endpoint público a una ruta explícita '/public'
+  @Get('public')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener testimonios públicos',
-    description: 'Obtener una lista paginada de testimonios aprobados y públicos, opcionalmente filtrados por categoría, etiqueta y organización.',
+    description: 'Obtener una lista paginada de testimonios aprobados, opcionalmente filtrados por categoría, etiqueta y organización.',
   })
-  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' }) // Añadir Param para organizationId
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Lista de testimonios públicos' })
   async findPublic(
-    @Param('organizationId') organizationId: string, // Obtener organizationId del parámetro de ruta
+    @Param('organizationId') organizationId: string,
     @Query() query: GetTestimoniosQueryDto
   ) {
-    // Asegurarse de que el organizationId de la ruta se use para filtrar
     if (!query.organization_id) {
       query.organization_id = organizationId;
     } else if (query.organization_id !== organizationId) {
@@ -216,12 +235,11 @@ export class TestimoniosController {
     return this.testimoniosService.findPending(organizationId, page, limit);
   }
 
-  // ver testimonio por id
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener testimonio por ID',
-    description: 'Obtener un testimonio por su ID. Solo accesible para administradores y superadministradores de la organización.',
+    description: 'Obtener un testimonio por su ID dentro de la organización especificada.',
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })

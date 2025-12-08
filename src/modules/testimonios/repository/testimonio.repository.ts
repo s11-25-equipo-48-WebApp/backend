@@ -53,9 +53,8 @@ export class TestimonioRepository {
     const qb = this.repo.createQueryBuilder('t')
       .leftJoinAndSelect('t.category', 'category')
       .leftJoinAndSelect('t.tags', 'tag')
-      .leftJoin('t.author', 'author')
-      .addSelect(['author.id', 'author.name', 'author.email'])
-      .where('t.deleted_at IS NULL');
+      .where('t.deleted_at IS NULL')
+      .distinct(true);
 
     if (opts.category_id) {
       qb.andWhere('category.id = :categoryId', { categoryId: opts.category_id });
@@ -77,6 +76,4 @@ export class TestimonioRepository {
 
     return qb.getManyAndCount();
   }
-
-
 }

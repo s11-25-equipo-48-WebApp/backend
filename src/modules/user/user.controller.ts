@@ -16,7 +16,7 @@ import { TestimonioRolesGuard } from 'src/common/guards/testimonio-roles.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Get('me')
   @ApiOperation({ summary: 'Obtener los datos del usuario autenticado' })
@@ -26,9 +26,9 @@ export class UserController {
   async findMe(@Req() req) {
     const user = req.user;
     Logger.log(`findMyTestimonios: userId: ${user.id}`);
-        if (!user || !user.id) {
-          throw new UnauthorizedException('Usuario no autenticado.');
-        }
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
+    }
     return this.userService.findMe(req.user.id);
   }
 
@@ -106,7 +106,7 @@ export class UserController {
     return this.userService.leaveOrganization(req.user.id, organizationId);
   }
 
-  @Get('testimonios')
+  /*@Get('testimonios')
   @ApiOperation({ summary: 'Obtener todos los testimonios del usuario' })
   @ApiResponse({ status: 200, description: 'Lista de testimonios del usuario.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
@@ -135,5 +135,5 @@ export class UserController {
       throw new UnauthorizedException('Usuario no autenticado.');
     }
     return this.userService.updateMyTestimonioStatus(req.user.id, testimonioId, updateStatusDto);
-  }
+  }*/
 }

@@ -19,8 +19,8 @@ import {
 } from '@nestjs/swagger';
 import type { RequestWithUser } from 'src/common/interfaces/RequestWithUser';
 import { Public } from 'src/common/decorators/public.decorator';
-import { AnalyticsService } from '../../analytics.service';
-import { CreateAnalyticsEventDto } from '../../dto/create-analytics-event.dto';
+import { AnalyticsService } from '../analytics.service';
+import { CreateAnalyticsEventDto } from '../dto/create-analytics-event.dto';
 
 /**
  * Controlador PÚBLICO para registrar eventos de analítica.
