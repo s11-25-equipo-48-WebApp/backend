@@ -14,7 +14,7 @@ export class UserProfile {
   @Column({ 
     type: 'varchar', 
     nullable: true,
-    default: '`https://backend-jnqc.onrender.com/static/avatar.png`'
+    default: '`https://raw.githubusercontent.com/s11-25-equipo-48-WebApp/backend/refs/heads/main/src/public/static/avatar.png`'
   })
   avatar_url!: string | null;
 

@@ -75,7 +75,7 @@ export class AuthService {
     // Crear perfil asociado
     const profile = this.userProfileRepository.create({
       user: newUser,
-      avatar_url: 'https://backend-jnqc.onrender.com/static/avatar.png',
+      avatar_url: 'https://raw.githubusercontent.com/s11-25-equipo-48-WebApp/backend/refs/heads/main/src/public/static/avatar.png',
       bio: '',
       metadata: {},
     });
