@@ -1,13 +1,14 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req, Res, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, Res, UseGuards, Logger, UnauthorizedException, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { LoginUserDto } from './dto/login.user.dto';
+import type { LoginUserDto } from './dto/login.user.dto';
 import type { RequestWithUser } from '../../common/interfaces/RequestWithUser';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import { JwtRefreshGuard } from 'src/jwt/jwt.guard';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { RefreshTokenInterceptor } from 'src/common/interceptors/refresh-token.interceptor';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -25,23 +26,10 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() loginUserDto: LoginUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { accessToken, refreshToken, ...user } = await this.authService.login(loginUserDto);
-
-    const isProd = this.config.get('NODE_ENV') === 'production';
-
-    res.cookie('refresh-token', refreshToken, {
-      httpOnly: true,
-      secure: isProd,                     // https en prod
-      sameSite: isProd ? 'none' : 'lax',  // none para frontend vercel
-      path: '/',
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    return { accessToken, user };
+  @UseInterceptors(RefreshTokenInterceptor)
+  async login(@Body() loginUserDto: LoginUserDto) {
+    Logger.log(`Data${loginUserDto}`);
+    return await this.authService.login(loginUserDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -55,24 +43,10 @@ export class AuthController {
   }
 
   @UseGuards(JwtRefreshGuard)
+  @UseInterceptors(RefreshTokenInterceptor)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Req() req: RequestWithUser,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { accessToken, refreshToken, ...user } = await this.authService.refresh(req.user);
-
-    const isProd = this.config.get('NODE_ENV') === 'production';
-
-    res.cookie('refresh-token', refreshToken, {
-      httpOnly: true,
-      secure: isProd,                     // https en prod
-      sameSite: isProd ? 'none' : 'lax',  // none para frontend vercel
-      path: '/',
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    return { accessToken, user };
+  async refresh(@Req() req) {
+    return await this.authService.refresh(req.user);
   }
 }

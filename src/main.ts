@@ -6,6 +6,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { useContainer } from 'class-validator';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { PinoLogger } from './infra/Logger/logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,9 +15,10 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
+  // ------------ COOKIE PARSER ------------
   app.use(cookieParser());
 
-  // Validations
+  // ------------ VALIDATION PIPE ------------
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -24,9 +27,10 @@ async function bootstrap() {
     }),
   );
 
-  // GLOBAL PREFIX
+  // ------------ GLOBAL PREFIX ------------
   app.setGlobalPrefix('api/v1');
 
+  // ------------ CORS ------------
   const whitelist = [
     'https://cms-testimonials.vercel.app',
     'http://localhost:3000',
@@ -37,24 +41,25 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-
       if (!origin) return callback(null, true);
-      callback(null, true);
-      if (!origin || whitelist.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      if (whitelist.includes(origin) || whitelist.includes('*')) {
+        return callback(null, true);
       }
+      return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-
+  // ------------ CLASS-VALIDATOR DI (required for custom validators) ------------
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  // -------- SWAGGER CONFIG --------
+  // ------------ EXCEPTION FILTER GLOBAL (AQUÍ VA) ------------
+  const logger = app.get(PinoLogger);
+  app.useGlobalFilters(new AllExceptionsFilter(logger));
+
+  // ------------ SWAGGER ------------
   const opts = new DocumentBuilder()
     .setTitle('CMS API')
     .setDescription('Documentación API para el CMS')
@@ -69,9 +74,9 @@ async function bootstrap() {
   const doc = SwaggerModule.createDocument(app, opts, {
     ignoreGlobalPrefix: false,
   });
-
   SwaggerModule.setup('docs', app, doc);
 
+  // ------------ START SERVER ------------
   const port = configService.get<number>('PORT') || 3002;
 
   await app.listen(port);

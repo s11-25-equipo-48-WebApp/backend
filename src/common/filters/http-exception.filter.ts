@@ -21,11 +21,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
+    let errorResponse: any = exception;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const r = exception.getResponse();
-      message = typeof r === 'string' ? r : (r as any).message || message;
+      errorResponse = exception.getResponse(); // Get the actual error response from HttpException
+      message = typeof errorResponse === 'string' ? errorResponse : (errorResponse as any).message || message;
+    } else if (exception instanceof Error) {
+      message = exception.message;
     }
 
     const payload = {
@@ -36,9 +39,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
 
     this.logger.error(
-      'Unhandled exception: ' + JSON.stringify({ exception, payload })
+      'Caught exception: ' + JSON.stringify({ exception: errorResponse, payload })
     );
 
-    return res.status(status).json(payload);
+    // Using res.send() and then explicitly ending the response to prevent further processing
+    // and resolve "Headers already sent" and subsequent 404 errors.
+    res.status(status).send(payload);
   }
 }
