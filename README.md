@@ -2,6 +2,21 @@
 
 [![Sector: Edtech](https://img.shields.io/badge/Sector-Edtech-blueviolet)](https://www.example.com/edtech)
 
+---
+
+## 🔐 IMPORTANTE: Corrección del Refresh Token
+
+> **Si vienes por la corrección del refresh token, [EMPIEZA AQUÍ →](./START_HERE.md)**
+
+Cambios recientes:
+- ✅ JWT Secrets separados y más seguros
+- ✅ TokenId incluido en el payload del refresh
+- ✅ Logs de debugging agregados
+
+[Ver todos los cambios →](./REFRESH_TOKEN_FIX.md)
+
+---
+
 ## 🚀 Descripción del Proyecto
 
 > Este proyecto es un Sistema de Gestión de Contenidos (CMS) especializado en la recopilación, organización y publicación de testimonios y casos de éxito. Está diseñado para instituciones y empresas del sector Edtech que buscan mostrar el impacto de sus programas o productos a través de historias reales. El CMS ofrece funcionalidades robustas para la curaduría, moderación y analítica de engagement, permitiendo la integración de testimonios en diversos formatos (texto, video, imagen) en sitios web externos.

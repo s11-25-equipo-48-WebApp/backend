@@ -149,8 +149,9 @@ export class AuthService {
     const tokenRecord = await this.authTokenRepository.save(
       this.authTokenRepository.create({
         refresh_token_hash: '',
-        user,
+        user_id: user.id,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        created_at: new Date(),
       }),
     );
 
@@ -206,13 +207,14 @@ export class AuthService {
   async refresh(user: any) {
     this.logger.debug(`Iniciando refresh para el usuario: ${user.id}`);
 
-    const tokenInDb = user.authToken;
+    // Comprobar el token en la bd
+    const tokenInDb = await this.authTokenRepository.findOne({ where: { user_id: user.id } });
     if (!tokenInDb) {
       throw new UnauthorizedException('Token de refresco no validado por la estrategia.');
     }
-
+    // Borrar el token si existe y se ha expirado
     tokenInDb.revoked = true;
-    await this.authTokenRepository.save(tokenInDb);
+    //await this.authTokenRepository.save(tokenInDb);
 
     // Obtener organizaciones
     const userOrganizations = await this.organizationUserRepository.find({
@@ -226,30 +228,41 @@ export class AuthService {
       role: ou.role,
     }));
 
-    const payload = {
+    const accessPayload = {
       sub: user.id,
       email: user.email,
       organizations: organizationsPayload,
     };
 
-    const newAccessToken = this.jwtService.sign(payload, {
+    const newAccessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
     });
 
-    const newRefreshToken = this.jwtService.sign(payload, {
+    // Crear el registro del token primero para obtener el ID
+    const newTokenEntity = this.authTokenRepository.create({
+      refresh_token_hash: '',
+      user_id: user.id,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      created_at: new Date(),
+    });
+
+    await this.authTokenRepository.save(newTokenEntity);
+
+    // Ahora incluir el tokenId en el payload del refresh token
+    const refreshPayload = {
+      ...accessPayload,
+      tokenId: newTokenEntity.id,
+    };
+
+    const newRefreshToken = this.jwtService.sign(refreshPayload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
     });
 
+    // Actualizar el hash del refresh token
     const newHash = await bcrypt.hash(newRefreshToken, 10);
-
-    const newTokenEntity = this.authTokenRepository.create({
-      refresh_token_hash: newHash,
-      user: user,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
+    newTokenEntity.refresh_token_hash = newHash;
     await this.authTokenRepository.save(newTokenEntity);
 
     return {

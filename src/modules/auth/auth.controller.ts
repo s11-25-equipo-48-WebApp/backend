@@ -43,12 +43,14 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @UseInterceptors(RefreshTokenInterceptor)
   async refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
+    Logger.log('[AUTH CONTROLLER] Refresh endpoint llamado');
+    Logger.log('[AUTH CONTROLLER] User data:', JSON.stringify(req.user));
+    
     const result = await this.authService.refresh(req.user);
     
+    Logger.log('[AUTH CONTROLLER] Refresh exitoso, refreshToken presente:', !!result.refreshToken);
     // El RefreshTokenInterceptor se encarga de establecer la cookie automáticamente
     // No necesitamos hacerlo manualmente aquí
-    
     return result;
   }
-
 }
