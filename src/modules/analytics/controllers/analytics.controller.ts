@@ -5,8 +5,6 @@ import {
     Query,
     UseGuards,
     ValidationPipe,
-    HttpCode,
-    HttpStatus,
     Logger,
 } from '@nestjs/common';
 import {
@@ -39,7 +37,6 @@ export class AnalyticsController {
      */
     @Get('metrics')
     @Roles(Role.ADMIN, Role.EDITOR)
-    @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Obtener métricas del dashboard de analítica',
         description: `
@@ -172,7 +169,6 @@ Retorna los valores usados en las tarjetas del dashboard.
      */
     @Get('events/:eventId')
     @Roles(Role.ADMIN)
-    @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Obtener detalles completos de un evento de analítica',
         description: `
@@ -269,7 +265,6 @@ Se muestra en un modal con los detalles completos del evento.
      */
     @Get('events')
     @Roles(Role.ADMIN)
-    @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Listar eventos de analítica con búsqueda, filtros y paginación',
         description: `

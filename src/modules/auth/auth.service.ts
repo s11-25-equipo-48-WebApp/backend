@@ -57,7 +57,7 @@ export class AuthService {
 
     const newUser = this.usersRepository.create({
       name: firstName || '',
-      last_name: lastName|| '',
+      last_name: lastName || '',
       email,
       password_hash: hashedPassword,
       is_active: true,
@@ -107,43 +107,54 @@ export class AuthService {
   async login(loginUserDto: LoginUserDto) {
     const { email, password } = loginUserDto;
 
+    // Buscar usuario por email
     const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) throw new BadRequestException('Email o contraseña incorrectos');
+    Logger.log('USER FROM DB =>', user);
 
+    if (!user) {
+      throw new UnauthorizedException('Email no Existe');
+    }
+
+    // Validar contraseña
     const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordCorrect) throw new BadRequestException('Email o contraseña incorrectos');
+    if (!isPasswordCorrect) {
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
 
-    // Obtener todas las organizaciones del usuario
+    // Organización del usuario
     const userOrganizations = await this.organizationUserRepository.find({
       where: { user: { id: user.id } },
       relations: ['organization'],
     });
 
-    const organizationsPayload = userOrganizations.map(ou => ({
+    const organizationsPayload = userOrganizations.map((ou) => ({
       id: ou.organization.id,
       name: ou.organization.name,
       role: ou.role,
     }));
 
-    // Revocar tokens anteriores y limpiar expirados
+    // Revocar tokens previos
     await this.authTokenRepository.update(
       { user: { id: user.id }, revoked: false },
       { revoked: true },
     );
+
+    // Eliminar tokens expirados
     await this.authTokenRepository.delete({
       user: { id: user.id },
       expires_at: LessThan(new Date()),
     });
 
-    // 1) Crear registro de token vacío para obtener tokenEntity.id
-    const tokenEntity = this.authTokenRepository.create({
-      refresh_token_hash: '', // placeholder
-      user: user,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-    await this.authTokenRepository.save(tokenEntity); // ahora tiene id
+    // Crear registro temporal del refresh token
+    const tokenRecord = await this.authTokenRepository.save(
+      this.authTokenRepository.create({
+        refresh_token_hash: '',
+        user,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      }),
+    );
 
-    // 2) Preparar payloads
+    // Payloads
     const accessPayload = {
       sub: user.id,
       email: user.email,
@@ -151,13 +162,11 @@ export class AuthService {
     };
 
     const refreshPayload = {
-      sub: user.id,
-      email: user.email,
-      organizations: organizationsPayload,
-      tokenId: tokenEntity.id, // <-- clave
+      ...accessPayload,
+      tokenId: tokenRecord.id,
     };
 
-    // 3) Firmar tokens
+    // Firmar tokens
     const accessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: '15m',
@@ -168,11 +177,11 @@ export class AuthService {
       expiresIn: '7d',
     });
 
-    // 4) Hashear el refresh token y actualizar el registro
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    tokenEntity.refresh_token_hash = refreshTokenHash;
-    await this.authTokenRepository.save(tokenEntity);
+    // Guardar hash del refresh token
+    tokenRecord.refresh_token_hash = await bcrypt.hash(refreshToken, 10);
+    await this.authTokenRepository.save(tokenRecord);
 
+    // Respuesta final
     return {
       id: user.id,
       name: user.name,

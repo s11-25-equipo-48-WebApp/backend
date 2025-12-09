@@ -11,8 +11,6 @@ import {
   Res,
   UnauthorizedException,
   UseGuards,
-  HttpCode,
-  HttpStatus,
   Logger,
   ParseUUIDPipe,
   Query,
@@ -62,7 +60,6 @@ export class OrganizationController {
   // ======================================================
   @Get("public")
   @Public()
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Lista paginada pública de organizaciones" })
   @ApiQuery({ name: "page", required: false, type: Number, example: 1 })
   @ApiQuery({ name: "limit", required: false, type: Number, example: 20 })
@@ -100,7 +97,6 @@ export class OrganizationController {
   @ApiBadRequestResponse({
     description: "Conflictos por nombre duplicado o usuario ya perteneciente",
   })
-  @HttpCode(HttpStatus.CREATED)
   async createOrganization(
     @Body() dto: CreateOrganizationDto,
     @Req() req,
@@ -285,7 +281,6 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Registrar miembro por ID o email" })
   @ApiBody({ type: CreateOrganizationMemberDto })
   async registerMember(
@@ -362,7 +357,6 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Aprobar solicitud de unión" })
   async approveMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
@@ -379,7 +373,6 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Rechazar solicitud de unión" })
   async rejectMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,

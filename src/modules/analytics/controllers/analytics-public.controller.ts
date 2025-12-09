@@ -41,7 +41,6 @@ export class AnalyticsPublicController {
      * ESTE ENDPOINT ES PÚBLICO - NO REQUIERE AUTENTICACIÓN
      */
     @Post('events')
-    @HttpCode(HttpStatus.CREATED)
     @ApiOperation({
         summary: 'Registrar evento de analítica (PÚBLICO)',
         description: `

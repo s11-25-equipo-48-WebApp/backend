@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Req, Res, UseGuards, Logg
 import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
-import type { LoginUserDto } from './dto/login.user.dto';
+import { LoginUserDto } from './dto/login.user.dto';
 import type { RequestWithUser } from '../../common/interfaces/RequestWithUser';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import { JwtRefreshGuard } from 'src/jwt/jwt.guard';
@@ -19,13 +19,11 @@ export class AuthController {
   ) { }
 
   @Post('register')
-  @HttpCode(HttpStatus.CREATED)
   async register(@Body() registerUserDto: RegisterUserDto) {
     return this.authService.register(registerUserDto);
   }
 
   @Post('login')
-  @HttpCode(HttpStatus.OK)
   @UseInterceptors(RefreshTokenInterceptor)
   async login(@Body() loginUserDto: LoginUserDto) {
     Logger.log(`Data${loginUserDto}`);
@@ -35,7 +33,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
   async logout(@Req() req: RequestWithUser, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(req.user);
     res.clearCookie('refresh-token');
@@ -45,7 +42,6 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @UseInterceptors(RefreshTokenInterceptor)
   @Post('refresh')
-  @HttpCode(HttpStatus.OK)
   async refresh(@Req() req) {
     return await this.authService.refresh(req.user);
   }

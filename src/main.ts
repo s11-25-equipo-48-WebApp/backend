@@ -6,8 +6,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { useContainer } from 'class-validator';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { PinoLogger } from './infra/Logger/logger.service';
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
+import { GlobalResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -57,7 +58,8 @@ async function bootstrap() {
 
   // ------------ EXCEPTION FILTER GLOBAL (AQUÍ VA) ------------
   const logger = app.get(PinoLogger);
-  app.useGlobalFilters(new AllExceptionsFilter(logger));
+  app.useGlobalFilters(new GlobalHttpExceptionFilter());
+  app.useGlobalInterceptors(new GlobalResponseInterceptor());
 
   // ------------ SWAGGER ------------
   const opts = new DocumentBuilder()

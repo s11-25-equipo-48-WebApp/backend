@@ -3,13 +3,11 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   Param,
   Patch,
   Post,
   Req,
   UseGuards,
-  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -55,7 +53,6 @@ export class TagsController {
 
   @Post()
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear tag' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiBody({ type: CreateTagDto })
@@ -76,7 +73,6 @@ export class TagsController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar tag' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
@@ -88,7 +84,6 @@ export class TagsController {
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar tag (remueve relaciones con testimonios)' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })

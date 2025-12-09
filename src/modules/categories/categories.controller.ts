@@ -3,14 +3,12 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   Param,
   Patch,
   Post,
   Query,
   Req, // Importar Req
   UseGuards, // Importar UseGuards
-  HttpStatus, // Importar HttpStatus
 } from '@nestjs/common';
 import {
   ApiBearerAuth, // Importar ApiBearerAuth
@@ -68,7 +66,6 @@ export class CategoriesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear categoría', description: 'Crea una nueva categoría. Name debe ser único dentro de la organización.' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiBody({ type: CreateCategoryDto })
@@ -80,7 +77,6 @@ export class CategoriesController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Actualizar categoría' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID de la categoría (uuid)' })
@@ -92,7 +88,6 @@ export class CategoriesController {
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar categoría', description: 'Si hay testimonios asociados, pasar reassign_to en query para reasignarlos antes de borrar. La categoría debe pertenecer a la organización del usuario.' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID de la categoría (uuid)' })

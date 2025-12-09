@@ -5,7 +5,6 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { APP_FILTER } from "@nestjs/core";
-import { AllExceptionsFilter } from "./common/filters/http-exception.filter";
 import { LoggerModule } from "./infra/Logger/logger.module";
 import { TypeOrmConfigService } from "./config/typeorm.config";
 import { TestimoniosModule } from './modules/testimonios/testimonios.module';
@@ -38,10 +37,6 @@ import { EmbedModule } from "./modules/embedb/embed.module";
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_FILTER,
-      useClass: AllExceptionsFilter,
-    },
   ],
 })
 export class AppModule { }

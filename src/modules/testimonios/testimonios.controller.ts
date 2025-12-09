@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpCode,
   Param,
   Patch,
   Post,
@@ -12,7 +11,6 @@ import {
   ValidationPipe,
   UseGuards,
   Delete, // Importar Delete
-  HttpStatus, // Importar HttpStatus
 } from '@nestjs/common';
 import {
   ApiBearerAuth, // Importar ApiBearerAuth
@@ -43,7 +41,6 @@ export class TestimoniosController {
 
   @Post()
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Crear testimonio',
     description:
@@ -94,7 +91,6 @@ export class TestimoniosController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Editar testimonio',
     description:
@@ -135,7 +131,6 @@ export class TestimoniosController {
 
   @Patch(':id/status')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cambiar estado de un testimonio',
     description:
@@ -173,7 +168,6 @@ export class TestimoniosController {
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Eliminar testimonio (soft delete)',
     description: 'Marca un testimonio como eliminado lógicamente. Solo administradores y superadministradores pueden realizar esta acción.', // ✅ CAMBIO
@@ -199,7 +193,6 @@ export class TestimoniosController {
   }
 
   @Get('public')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener testimonios públicos',
     description: 'Obtener una lista paginada de testimonios aprobados, opcionalmente filtrados por categoría, etiqueta y organización.',
@@ -220,7 +213,6 @@ export class TestimoniosController {
 
   @Get('pending')
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener testimonios pendientes',
     description: 'Obtener una lista paginada de testimonios con estado PENDIENTE. Solo accesible para administradores y superadministradores de la organización.',
@@ -236,7 +228,6 @@ export class TestimoniosController {
   }
 
   @Get(':id')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener testimonio por ID',
     description: 'Obtener un testimonio por su ID dentro de la organización especificada.',
