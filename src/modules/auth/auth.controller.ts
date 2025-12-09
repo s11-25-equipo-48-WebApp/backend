@@ -39,10 +39,23 @@ export class AuthController {
     return { message: 'Logout exitoso' };
   }
 
+  @Post('refresh')
   @UseGuards(JwtRefreshGuard)
   @UseInterceptors(RefreshTokenInterceptor)
-  @Post('refresh')
-  async refresh(@Req() req) {
-    return await this.authService.refresh(req.user);
+  async refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.refresh(req.user);
+
+    res.cookie("refresh_token", result.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    //delete result.refreshToken; // opcional, para no enviarlo por JSON
+
+    return result;
   }
+
 }
