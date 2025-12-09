@@ -11,6 +11,7 @@ import { AuthToken } from "./entities/authToken.entity";
 //import { Role } from "./entities/enums";
 import { Organization } from "../organization/entities/organization.entity";
 import { OrganizationUser } from "../organization/entities/organization_user.entity";
+import { UserProfile } from "./entities/userProfile.entity";
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,8 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(UserProfile)
+    private readonly userProfileRepository: Repository<UserProfile>,
     @InjectRepository(AuthToken)
     private readonly authTokenRepository: Repository<AuthToken>,
     private readonly jwtService: JwtService,
@@ -62,6 +65,18 @@ export class AuthService {
       password_hash: hashedPassword,
       is_active: true,
     });
+
+    await this.usersRepository.save(
+      {
+        ...newUser,
+        profile: this.userProfileRepository.create({
+          user_id: newUser.id,
+          avatar_url: null,
+          bio: '',
+          metadata: {},
+        }),
+      }
+    );
 
     await this.usersRepository.save(newUser);
     return newUser;

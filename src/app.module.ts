@@ -14,6 +14,8 @@ import { OrganizationModule } from "./modules/organization/organization.module";
 import { UserModule } from './modules/user/user.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { EmbedModule } from "./modules/embedb/embed.module";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
 
 @Module({
   imports: [
@@ -23,6 +25,10 @@ import { EmbedModule } from "./modules/embedb/embed.module";
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useClass: TypeOrmConfigService,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'), // ⬅️ La ruta a tu carpeta estática
+      serveRoot: '/static', // ⬅️ El prefijo URL para acceder a los archivos estáticos (opcional)
     }),
     LoggerModule,
     AuthModule,

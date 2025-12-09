@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from "typeorm";
 import { User } from "./user.entity";
 
+
 @Entity('user_profiles')
 export class UserProfile {
   @PrimaryColumn('uuid')
@@ -10,7 +11,11 @@ export class UserProfile {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ 
+    type: 'varchar', 
+    nullable: true,
+    default: '`https://backend-jnqc.onrender.com/static/avatar.png`'
+  })
   avatar_url!: string | null;
 
   @Column({ type: 'text' })

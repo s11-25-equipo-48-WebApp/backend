@@ -36,4 +36,19 @@ export class EmbedbController {
     ): Promise<string> {
         return this.embedService.generateIframeEmbedCode(id, query.organizationId, query);
     }
+
+    //Endpoint para obtneer vaarios testimonios de una organización
+    // @ApiOperation({ summary: "Genera el HTML embebido de un testimonio individual con avatar y auto" })
+    // @Public()
+    // @Get(":organizationId")
+    // @Header("Content-Type", "text/html; charset=utf-8")
+    // @Header("X-Frame-Options", "ALLOWALL")
+    // async getOrganizationEmbed(
+    //     @Param("organizationId") organizationId: string, 
+    //     @Query() query: GetEmbedQueryDto,
+    //     @Res() res: Response
+    // ): Promise<void> {
+    //     const html = await this.embedService.generateOrganizationTestimonialContentHtml(organizationId, query);
+    //     res.send(html);
+    // }
 }

@@ -11,6 +11,7 @@ import { User } from "./entities/user.entity";
 import { AuthToken } from "./entities/authToken.entity";
 import { OrganizationUser } from "../organization/entities/organization_user.entity";
 import { Organization } from "../organization/entities/organization.entity";
+import { UserProfile } from "./entities/userProfile.entity";
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { Organization } from "../organization/entities/organization.entity";
       AuthToken, 
       OrganizationUser,
       Organization,
+      UserProfile,
     ]),
   ],
   providers: [
@@ -42,7 +44,7 @@ import { Organization } from "../organization/entities/organization.entity";
   exports: [
     AuthService,
     JwtStrategy,
-    PassportModule
+    PassportModule,
   ],
 })
 export class AuthModule {}

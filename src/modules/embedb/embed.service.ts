@@ -78,4 +78,27 @@ export class EmbedService {
 ></iframe>
 `;
     }
+
+    // async generateOrganizationTestimonialContentHtml(organizationId: string, query: GetEmbedQueryDto): Promise<string> {
+    //     const testimonios = await this.testimoniosService.findAllByOrganization(organizationId);
+
+    //     const { width, theme, autoplay } = query;
+    //     const embedWidth = width ? `${width}px` : "600px";
+    //     const parsedAutoplay = String(autoplay).toLowerCase() === "true";
+
+    //     const textColor = theme === "dark" ? "#fff" : "#333";
+    //     const backgroundColor = theme === "dark" ? "#333" : "#f0f0f0";
+
+    //     // Author and Avatar
+    //     let authorInfoHtml = "";
+    //     const authorName = testimonios[0].author_name || "Anónimo";
+    //     const avatarUrl = "https://via.placeholder.com/40"; // Using a generic placeholder as avatar_url does not exist on User type
+
+    //     authorInfoHtml = `
+    //         <div style="display: flex; align-items: center; margin-bottom: 10px;">
+    //             <img src="${avatarUrl}" alt="${authorName}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+    //             <span style="font-weight: bold; color: ${textColor};">${authorName}</span>
+    //         </div>
+    //     `;
+    // }
 }
