@@ -9,9 +9,11 @@ import { useContainer } from 'class-validator';
 import { PinoLogger } from './infra/Logger/logger.service';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { GlobalResponseInterceptor } from './common/interceptors/response.interceptor';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   console.log('[MAIN] App bootstrap iniciada');
 
   const configService = app.get(ConfigService);
@@ -80,6 +82,9 @@ async function bootstrap() {
 
   // ------------ START SERVER ------------
   const port = configService.get<number>('PORT') || 3002;
+  app.useStaticAssets(join(__dirname, '..', 'public', 'static'), {
+  prefix: '/static/',
+});
 
   await app.listen(port);
   console.log(`🚀 Server running on port ${port}`);

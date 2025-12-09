@@ -42,43 +42,50 @@ export class AuthService {
   async register(registerUserDto: RegisterUserDto): Promise<User> {
     const { email, password, fullName } = registerUserDto;
 
+    // Verificar si el usuario ya existe
     const existingUser = await this.usersRepository.findOne({ where: { email } });
     if (existingUser) {
       throw new BadRequestException('El email ya está registrado');
     }
 
+    // Hashear contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Separar nombre y apellido
     let firstName = '';
     let lastName = '';
-
     if (fullName) {
       const [f, ...l] = fullName.trim().split(' ');
       firstName = f;
       lastName = l.join(' ');
     }
 
+    // Crear usuario
     const newUser = this.usersRepository.create({
-      name: firstName || '',
-      last_name: lastName || '',
+      name: firstName,
+      last_name: lastName,
       email,
       password_hash: hashedPassword,
       is_active: true,
     });
 
-    await this.usersRepository.save(
-      {
-        ...newUser,
-        profile: this.userProfileRepository.create({
-          user_id: newUser.id,
-          avatar_url: null,
-          bio: '',
-          metadata: {},
-        }),
-      }
-    );
-
+    // Guardar primero el usuario
     await this.usersRepository.save(newUser);
+
+    // Crear perfil asociado
+    const profile = this.userProfileRepository.create({
+      user: newUser,
+      avatar_url: 'https://backend-jnqc.onrender.com/static/avatar.png',
+      bio: '',
+      metadata: {},
+    });
+
+    // Guardar perfil
+    await this.userProfileRepository.save(profile);
+
+    // Asignar perfil al usuario (opcional)
+    newUser.profile = profile;
+
     return newUser;
   }
 
