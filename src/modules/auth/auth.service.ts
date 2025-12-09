@@ -56,8 +56,8 @@ export class AuthService {
     }
 
     const newUser = this.usersRepository.create({
-      name: firstName,
-      last_name: lastName,
+      name: firstName || '',
+      last_name: lastName|| '',
       email,
       password_hash: hashedPassword,
       is_active: true,
