@@ -109,7 +109,7 @@ export class OrganizationController {
     }
 
     if (user.organizations?.length > 0) {
-      throw new BadRequestException("El usuario ya pertenece a una o más organizaciones.");
+      //throw new BadRequestException("El usuario ya pertenece a una o más organizaciones.");
     }
 
     const { organizations, newAccessToken, newRefreshToken } =

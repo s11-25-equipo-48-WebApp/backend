@@ -125,14 +125,14 @@ export class OrganizationService {
             throw new NotFoundException(`Usuario con email ${addMemberDto.email} no encontrado.`);
         }
 
-        const existingMember = await this.organizationUserRepository.findOne({
-            where: { organization: { id: organizationId }, user: { id: user.id } },
-        });
+        // const existingMember = await this.organizationUserRepository.findOne({
+        //     where: { organization: { id: organizationId }, user: { id: user.id } },
+        // });
 
-        // Revisar si ya existe una relación para evitar duplicados
-        if (existingMember) {
-            throw new BadRequestException('El usuario ya es miembro de esta organización.');
-        }
+        // // Revisar si ya existe una relación para evitar duplicados
+        // if (existingMember) {
+        //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        // }
 
         const newMember = this.organizationUserRepository.create({
             organization,
@@ -153,13 +153,13 @@ export class OrganizationService {
             throw new NotFoundException(`Usuario con ID ${userId} no encontrado.`);
         }
 
-        const existingMember = await this.organizationUserRepository.findOne({
-            where: { organization: { id: organizationId }, user: { id: user.id } },
-        });
+        // const existingMember = await this.organizationUserRepository.findOne({
+        //     where: { organization: { id: organizationId }, user: { id: user.id } },
+        // });
 
-        if (existingMember) {
-            throw new BadRequestException('El usuario ya es miembro de esta organización.');
-        }
+        // if (existingMember) {
+        //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        // }
 
         const newMember = this.organizationUserRepository.create({
             organization,
@@ -180,13 +180,13 @@ export class OrganizationService {
             throw new NotFoundException(`Usuario con email ${email} no encontrado.`);
         }
 
-        const existingMember = await this.organizationUserRepository.findOne({
-            where: { organization: { id: organizationId }, user: { id: user.id } },
-        });
+        // const existingMember = await this.organizationUserRepository.findOne({
+        //     where: { organization: { id: organizationId }, user: { id: user.id } },
+        // });
 
-        if (existingMember) {
-            throw new BadRequestException('El usuario ya es miembro de esta organización.');
-        }
+        // if (existingMember) {
+        //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        // }
 
         const newMember = this.organizationUserRepository.create({
             organization,
@@ -301,12 +301,12 @@ export class OrganizationService {
             throw new NotFoundException('Usuario no encontrado.');
         }
 
-        const existingOrgUser = await this.organizationUserRepository.findOne({
-            where: { user: { id: userId } },
-        });
-        if (existingOrgUser) {
-            throw new BadRequestException('El usuario ya pertenece a una organización.');
-        }
+        // const existingOrgUser = await this.organizationUserRepository.findOne({
+        //     where: { user: { id: userId } },
+        // });
+        // if (existingOrgUser) {
+        //     throw new BadRequestException('El usuario ya pertenece a una organización.');
+        // }
 
         // Verificar si ya existe una organización con el mismo nombre
         const existingOrganizationByName = await this.organizationRepository.findOneBy({ name: createOrganizationDto.name });
