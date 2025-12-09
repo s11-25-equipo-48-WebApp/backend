@@ -44,17 +44,10 @@ export class AuthController {
   @UseInterceptors(RefreshTokenInterceptor)
   async refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.refresh(req.user);
-
-    res.cookie("refresh_token", result.refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    //delete result.refreshToken; // opcional, para no enviarlo por JSON
-
+    
+    // El RefreshTokenInterceptor se encarga de establecer la cookie automáticamente
+    // No necesitamos hacerlo manualmente aquí
+    
     return result;
   }
 
