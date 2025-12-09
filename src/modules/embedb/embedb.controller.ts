@@ -10,7 +10,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 export class EmbedbController {
     constructor(
         private readonly embedService: EmbedService,
-    ) {}
+    ) { }
 
     @ApiOperation({ summary: "Genera el HTML embebido de un testimonio individual con avatar y auto" })
     @Public()
@@ -18,7 +18,7 @@ export class EmbedbController {
     @Header("Content-Type", "text/html; charset=utf-8")
     @Header("X-Frame-Options", "ALLOWALL")
     async getSingleEmbed(
-        @Param("id") id: string, 
+        @Param("id") id: string,
         @Query() query: GetEmbedQueryDto,
         @Res() res: Response
     ): Promise<void> {
@@ -31,20 +31,20 @@ export class EmbedbController {
     @Get(":id/code")
     @Header("Content-Type", "text/plain; charset=utf-8")
     async getSingleEmbedCode(
-        @Param("id") id: string, 
+        @Param("id") id: string,
         @Query() query: GetEmbedQueryDto
     ): Promise<string> {
         return this.embedService.generateIframeEmbedCode(id, query.organizationId, query);
     }
 
-    //Endpoint para obtneer vaarios testimonios de una organización
-    // @ApiOperation({ summary: "Genera el HTML embebido de un testimonio individual con avatar y auto" })
+    //Endpoint para obtener los ultimos testimonios de una organización 1 o más
+    // @ApiOperation({ summary: "Genera el HTML embebido de los testimonios aprobados de una organización" })
     // @Public()
-    // @Get(":organizationId")
+    // @Get(":organizationId/testimonios")
     // @Header("Content-Type", "text/html; charset=utf-8")
     // @Header("X-Frame-Options", "ALLOWALL")
-    // async getOrganizationEmbed(
-    //     @Param("organizationId") organizationId: string, 
+    // async getOrganizationTestimoniosEmbed(
+    //     @Param("organizationId") organizationId: string,
     //     @Query() query: GetEmbedQueryDto,
     //     @Res() res: Response
     // ): Promise<void> {

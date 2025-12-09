@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Status } from 'src/modules/organization/entities/enums';
+import { StatusS } from '../entities/testimonio.entity';
 //import { Status } from 'src/modules/auth/entities/enums';
 /**
  * DTO que recibe el nuevo estado en español según los criterios.
@@ -8,10 +8,10 @@ import { Status } from 'src/modules/organization/entities/enums';
 export class UpdateStatusDto {
   @ApiProperty({
     description: 'Nuevo estado (pendiente | aprobado | rechazado)',
-    enum: Status,
-    example: Status.APROBADO,
+    enum: StatusS,
+    example: StatusS.APROBADO,
   })
-  @IsEnum(Status)
+  @IsEnum(StatusS)
   @IsNotEmpty()
-  status: Status;
+  status: StatusS;
 }

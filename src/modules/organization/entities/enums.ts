@@ -9,4 +9,5 @@ export enum Status {
   PENDIENTE = 'pendiente',
   APROBADO = 'aprobado',
   RECHAZADO = 'rechazado',
+  APPROVED = "APPROVED",
 }

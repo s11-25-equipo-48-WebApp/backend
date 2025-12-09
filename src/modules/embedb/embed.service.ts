@@ -2,12 +2,38 @@ import { Injectable, NotFoundException, BadRequestException } from "@nestjs/comm
 import { TestimoniosService } from "../../modules/testimonios/testimonios.service";
 import { GetEmbedQueryDto } from "./dto/get-embed-query.dto";
 import { Status } from "../../modules/organization/entities/enums";
+import { StatusS, Testimonio } from "../testimonios/entities/testimonio.entity";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 
 @Injectable()
 export class EmbedService {
     constructor(
         private readonly testimoniosService: TestimoniosService,
+        @InjectRepository(Testimonio)
+        private readonly testimonioRepo: Repository<Testimonio>,
     ) { }
+
+    async findAllApprovedByOrganization(organizationId: string): Promise<Testimonio[]> {
+        return this.testimonioRepo.find({
+            where: {
+                organization: { id: organizationId },
+                status: StatusS.APROBADO,
+            },
+            order: { created_at: 'DESC' },
+        });
+    }
+
+    // Método existente
+  async findApprovedPublicById(id: string, organizationId: string): Promise<Testimonio | null> {
+    return this.testimonioRepo.findOne({
+      where: {
+        id,
+        organization: { id: organizationId },
+        status: StatusS.APROBADO,
+      },
+    });
+  }
 
     // Este método genera el *contenido HTML* del testimonio para ser incrustado
     async generateTestimonialContentHtml(id: string, organizationId: string, query: GetEmbedQueryDto): Promise<string> {
@@ -79,26 +105,53 @@ export class EmbedService {
 `;
     }
 
-    // async generateOrganizationTestimonialContentHtml(organizationId: string, query: GetEmbedQueryDto): Promise<string> {
-    //     const testimonios = await this.testimoniosService.findAllByOrganization(organizationId);
+//     async generateOrganizationTestimonialContentHtml(
+//         organizationId: string,
+//         query: GetEmbedQueryDto
+//     ): Promise<string> {
+//         const testimonios = await this.testimoniosService.findAllApprovedByOrganization(organizationId);
 
-    //     const { width, theme, autoplay } = query;
-    //     const embedWidth = width ? `${width}px` : "600px";
-    //     const parsedAutoplay = String(autoplay).toLowerCase() === "true";
+//         if (!testimonios || testimonios.length === 0) {
+//             throw new NotFoundException("No se encontraron testimonios aprobados para esta organización.");
+//         }
 
-    //     const textColor = theme === "dark" ? "#fff" : "#333";
-    //     const backgroundColor = theme === "dark" ? "#333" : "#f0f0f0";
+//         const { width, theme, autoplay } = query;
+//         const embedWidth = width ? `${width}px` : "600px";
+//         const parsedAutoplay = String(autoplay).toLowerCase() === "true";
+//         const textColor = theme === "dark" ? "#fff" : "#333";
+//         const backgroundColor = theme === "dark" ? "#333" : "#f0f0f0";
 
-    //     // Author and Avatar
-    //     let authorInfoHtml = "";
-    //     const authorName = testimonios[0].author_name || "Anónimo";
-    //     const avatarUrl = "https://via.placeholder.com/40"; // Using a generic placeholder as avatar_url does not exist on User type
+//         const testimoniosHtml = testimonios.map(testimonio => {
+//             const authorName = testimonio.author_name || "Anónimo";
+//             const avatarUrl = "https://via.placeholder.com/40"; // Placeholder avatar
+//             const authorInfoHtml = `
+//             <div style="display: flex; align-items: center; margin-bottom: 10px;">
+//                 <img src="${avatarUrl}" alt="${authorName}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+//                 <span style="font-weight: bold; color: ${textColor};">${authorName}</span>
+//             </div>
+//         `;
 
-    //     authorInfoHtml = `
-    //         <div style="display: flex; align-items: center; margin-bottom: 10px;">
-    //             <img src="${avatarUrl}" alt="${authorName}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-    //             <span style="font-weight: bold; color: ${textColor};">${authorName}</span>
-    //         </div>
-    //     `;
-    // }
+//             let mediaHtml = "";
+//             if (testimonio.media_url) {
+//                 if (testimonio.media_type === "image") {
+//                     mediaHtml = `<img src="${testimonio.media_url}" alt="Testimonio" style="max-width: 100%; height: auto;">`;
+//                 } else if (testimonio.media_type === "video") {
+//                     const separator = testimonio.media_url.includes("?") ? "&" : "?";
+//                     const videoUrl = `${testimonio.media_url}${separator}${parsedAutoplay ? "autoplay=1&" : ""}enablejsapi=1&version=3&playerapiid=ytplayer`;
+//                     mediaHtml = `<iframe src="${videoUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+//                 }
+//             }
+
+//             return `
+// <div style="width: ${embedWidth}; overflow: auto; border: 1px solid ${theme === "dark" ? "#555" : "#ccc"}; font-family: sans-serif; background-color: ${backgroundColor}; padding: 20px; margin-bottom: 20px; box-sizing: border-box;">
+//     ${authorInfoHtml}
+//     ${mediaHtml}
+//     <div style="color: ${textColor}; margin-top: 10px;">${testimonio.body}</div>
+// </div>`;
+//         }).join("\n");
+
+//         return testimoniosHtml;
+//     }
+
+
 }

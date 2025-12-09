@@ -16,6 +16,12 @@ import {
   JoinColumn,
 } from 'typeorm';
 
+export enum StatusS {
+  PENDIENTE = 'pendiente',
+  APROBADO = 'aprobado',
+  RECHAZADO = 'rechazado',
+}
+
 @Entity('testimonios')
 export class Testimonio {
   @PrimaryColumn('uuid')
@@ -63,8 +69,8 @@ export class Testimonio {
   @Column({ type: 'timestamptz', nullable: true })
   approved_at?: Date | null;
 
-  @Column({ type: 'varchar', length: 50, default: Status.PENDIENTE })
-  status: Status.PENDIENTE | Status.APROBADO | Status.RECHAZADO;
+  @Column({ type: "enum", enum: StatusS, default: StatusS.PENDIENTE })
+  status : StatusS;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

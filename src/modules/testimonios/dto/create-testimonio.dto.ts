@@ -10,6 +10,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CategoryExists } from '../validators/category-exists.validator';
 import { TagsExist } from '../validators/tags-exist.validator';
+import { StatusS } from '../entities/testimonio.entity';
 
 export enum MediaType {
   IMAGE = 'image',
@@ -53,6 +54,13 @@ export class CreateTestimonioDto {
   @ArrayUnique()
   @Validate(TagsExist)
   tags?: string[];
+
+  // @ApiProperty({
+  //   description: 'Estado del testimonio (pendiente | aprobado | rechazado)',
+  //   enum: StatusS,
+  //   example: StatusS.PENDIENTE,
+  // })
+  // status: StatusS;
 
   @ApiPropertyOptional({
     description:

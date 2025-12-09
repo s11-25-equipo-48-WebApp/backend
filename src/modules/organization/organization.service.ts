@@ -11,9 +11,9 @@ import { AuthToken } from "../auth/entities/authToken.entity";
 import * as bcrypt from "bcrypt";
 import { Embed } from "../embedb/entities/embed.entity";
 import { OrganizationMemberDto } from "./dto/organization-member.dto";
-import { Role, Status } from "./entities/enums"; // Importar Status
+import { Role } from "./entities/enums"; // Importar Status
 import { AuthService } from "src/modules/auth/auth.service"; // Importar AuthService
-import { Testimonio } from "src/modules/testimonios/entities/testimonio.entity"; // Importar Testimonio
+import { StatusS, Testimonio } from "src/modules/testimonios/entities/testimonio.entity"; // Importar Testimonio
 import { Category } from "src/modules/categories/entities/category.entity"; // Importar Category
 
 @Injectable()
@@ -87,7 +87,7 @@ export class OrganizationService {
         const approvedTestimonios = await this.testimoniosRepository.find({
             where: {
                 organization: { id: organizationId },
-                status: Status.APROBADO,
+                status: StatusS.APROBADO,
             },
             relations: ['category', 'tags', 'author'],
         });
@@ -238,7 +238,7 @@ export class OrganizationService {
                     where: {
                         created_by_user_id: member.user.id,
                         organization: { id: organizationId },
-                        status: Status.APROBADO,
+                        status: StatusS.APROBADO,
                     },
                 });
 
@@ -274,7 +274,7 @@ export class OrganizationService {
             where: {
                 created_by_user_id: member.user.id,
                 organization: { id: organizationId },
-                status: Status.APROBADO,
+                status: StatusS.APROBADO,
             },
         });
 

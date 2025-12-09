@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException, Logger } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { In, Repository, IsNull } from 'typeorm';
 import { TestimonioRepository } from './repository/testimonio.repository';
 import { CreateTestimonioDto } from './dto/create-testimonio.dto';
-import { Testimonio } from './entities/testimonio.entity';
+import { StatusS, Testimonio } from './entities/testimonio.entity';
 import { UpdateTestimonioDto } from './dto/update-testimonio.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuditLog } from './entities/audit-log.entity';
@@ -15,8 +15,9 @@ import { Tag } from 'src/modules/tags/entities/tag.entity';
 //import { Role, Status } from '../auth/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
-import { Role, Status } from '../organization/entities/enums';
+import { Role, Status,  } from '../organization/entities/enums';
 import { UserProfile } from '../auth/entities/userProfile.entity';
+//import { Status} from '../organization/entities/enums'
 
 @Injectable()
 export class TestimoniosService {
@@ -75,6 +76,7 @@ export class TestimoniosService {
             created_by_user_id: user?.id ?? null,
             organization: organization,
         });
+        Logger.log(`CCCCCCCcreate: entity.status=${entity.status}`);
 
         // ==========================================
         // LÓGICA DE APROBACIÓN AUTOMÁTICA BASADA EN ROLES
@@ -83,10 +85,11 @@ export class TestimoniosService {
         // - EDITOR y VISITOR: El testimonio se crea con estado PENDIENTE y requiere aprobación manual
         // ==========================================
         const isAdminOrSuperAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
-        entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
+        entity.status = isAdminOrSuperAdmin ? StatusS.APROBADO : StatusS.PENDIENTE;
+        //entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
 
         // Si se aprueba automáticamente (ADMIN/SUPERADMIN), registrar quién y cuándo lo aprobó
-        if (entity.status === Status.APROBADO) {
+        if (entity.status === StatusS.APROBADO) {
             entity.approved_by = user.id;
             entity.approved_at = new Date();
         }
@@ -232,8 +235,9 @@ export class TestimoniosService {
         }
 
         // obtener estados previos y nuevos 
-        const prevStatus = existing.status as Status;
-        const newStatus = dto.status as Status;
+        const prevStatus = existing.status;
+        //const newStatus = 'status' in dto ? dto.status : prevStatus;
+        const newStatus = dto.status;
 
         // si no cambia nada, devolver tal cual
         if (prevStatus === newStatus) {
@@ -242,9 +246,9 @@ export class TestimoniosService {
 
         // REGLAS DE TRANSICIÓN
         switch (prevStatus) {
-            case Status.PENDIENTE:
+            case StatusS.PENDIENTE:
                 // pendiente → aprobado | rechazado
-                if (newStatus === Status.APROBADO || newStatus === Status.RECHAZADO) {
+                if (newStatus === StatusS.APROBADO || newStatus === StatusS.RECHAZADO) {
                     // permitido
                 } else {
                     throw new BadRequestException(
@@ -253,15 +257,15 @@ export class TestimoniosService {
                 }
                 break;
 
-            case Status.RECHAZADO:
+            case StatusS.RECHAZADO:
                 // rechazado → pendiente (solo admin)
-                if (newStatus === Status.PENDIENTE) {
+                if (newStatus === StatusS.PENDIENTE) {
                     if (!isAdmin) {
                         throw new ForbiddenException(
                             'Solo un admin  puede mover rechazado → pendiente',
                         );
                     }
-                } else if (newStatus === Status.APROBADO) {
+                } else if (newStatus === StatusS.APROBADO) {
                     // rechazado → aprobado (solo admin)
                     if (!isAdmin) {
                         throw new ForbiddenException(
@@ -275,9 +279,9 @@ export class TestimoniosService {
                 }
                 break;
 
-            case Status.APROBADO:
+            case StatusS.APROBADO:
                 // aprobado → rechazado (solo admin)
-                if (newStatus === Status.RECHAZADO) {
+                if (newStatus === StatusS.RECHAZADO) {
                     if (!isAdmin) {
                         throw new ForbiddenException(
                             'Solo admin puede mover aprobado → rechazado',
@@ -299,7 +303,7 @@ export class TestimoniosService {
         const beforeApprovedAt = existing.approved_at ?? null;
 
         // si pasa a aprobado o rechazado → asignar aprobado por
-        if (newStatus === Status.APROBADO || newStatus === Status.RECHAZADO) {
+        if (newStatus === StatusS.APROBADO || newStatus === StatusS.RECHAZADO) {
             existing.approved_by = user.id;
             existing.approved_at = new Date();
             diff['approved_by'] = { before: beforeApprovedBy, after: user.id };
@@ -307,7 +311,7 @@ export class TestimoniosService {
         }
 
         // si vuelve a pendiente → limpiar campos
-        if (newStatus === Status.PENDIENTE) {
+        if (newStatus === StatusS.PENDIENTE) {
             existing.approved_by = null;
             existing.approved_at = null;
             diff['approved_by'] = { before: beforeApprovedBy, after: null };
@@ -315,10 +319,14 @@ export class TestimoniosService {
         }
 
         // aplicar estado
-        existing.status = newStatus;
+        //existing.status = newStatus;
 
         // guardar
-        const saved = await this.repo.save(existing);
+        const saved = await this.repo.save({
+            ...existing,
+            status:  newStatus,
+            //status: newStatus as Status,
+        });
 
         // audit log
         const audit: AuditLog = this.auditRepo.create({
@@ -401,7 +409,7 @@ export class TestimoniosService {
 
     async findApprovedPublicById(id: string, organizationId: string): Promise<Testimonio | null> {
         const testimonio = await this.repo.findOneById(id, organizationId);
-        if (testimonio && testimonio.status === Status.APROBADO) {
+        if (testimonio && testimonio.status === StatusS.APROBADO) {
             return testimonio;
         }
         return null;
@@ -446,7 +454,7 @@ export class TestimoniosService {
 
         const [items, total] = await this.repo.findPublicWithFilters({
             organization_id: organizationId,
-            status: Status.PENDIENTE,
+            status: StatusS.PENDIENTE,
             page,
             limit,
         });
