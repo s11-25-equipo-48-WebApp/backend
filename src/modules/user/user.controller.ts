@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, HttpCode, HttpStatus, UnauthorizedException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, HttpCode, HttpStatus, UnauthorizedException, Logger, Put } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import type { RequestWithUser } from 'src/common/interfaces/RequestWithUser';
@@ -10,6 +10,7 @@ import type { Response } from 'express';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '../organization/entities/enums';
 import { TestimonioRolesGuard } from 'src/common/guards/testimonio-roles.guard';
+import { UpdateAvatarDto } from './dto/updateAvatar.dto';
 
 @ApiTags('user')
 @Controller('user')
@@ -92,7 +93,6 @@ export class UserController {
   }
 
   @Delete('organizations/:id/leave')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Salir de una organización' })
   @ApiResponse({ status: 204, description: 'Usuario ha salido de la organización.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
@@ -105,6 +105,23 @@ export class UserController {
     }
     return this.userService.leaveOrganization(req.user.id, organizationId);
   }
+
+  @Put('me/avatar')
+  @ApiOperation({ summary: 'Actualizar el avatar del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'El avatar del usuario ha sido actualizado.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  @ApiBody({ type: UpdateAvatarDto, description: 'Datos del avatar del usuario' })
+  async updateAvatar(@Req() req,
+    @Body() updateAvatarDto: UpdateAvatarDto) {
+    const user = req.user;
+    //Logger.log(`findMyTestimonios: userId: ${user.id}`);
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
+    }
+    return this.userService.updateAvatar(req.user.id, updateAvatarDto);
+  }
+
 
   /*@Get('testimonios')
   @ApiOperation({ summary: 'Obtener todos los testimonios del usuario' })

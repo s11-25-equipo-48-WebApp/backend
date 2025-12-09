@@ -10,6 +10,8 @@ import { User } from '../auth/entities/user.entity';
 import { UserProfile } from '../auth/entities/userProfile.entity';
 import { Status } from '../organization/entities/enums';
 import { AuthToken } from '../auth/entities/authToken.entity';
+import { UpdateAvatarDto } from './dto/updateAvatar.dto';
+import { profile } from 'console';
 
 @Injectable()
 export class UserService {
@@ -45,6 +47,9 @@ export class UserService {
           is_active: true,
           created_at: true,
           updated_at: true,
+          profile: {
+            avatar_url: true,
+          }
         }
       });
 
@@ -174,6 +179,34 @@ export class UserService {
     }
 
     await this.organizationUserRepository.remove(membership);
+  }
+
+  async updateAvatar(userId: string, updateAvatarDto: UpdateAvatarDto) {
+    this.logger.log(`updateAvatar: userId: ${userId}, ${(updateAvatarDto)}`);
+    const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['profile'] });
+    if (!user) {
+      throw new NotFoundException(`User with ID "${userId}" not found`);
+    }
+
+    if (!user.profile || !user.profile.avatar_url) {
+      user.profile = this.userProfileRepository.create({ 
+        user_id: userId,
+        avatar_url: updateAvatarDto.avatar_url || '',
+        bio: '',
+        metadata: {},
+       });
+    }
+    this.logger.log(`updateAvatar: userId: ${userId}, user.profile: ${user.profile}`);
+
+
+    if (updateAvatarDto.avatar_url) {
+      user.profile.avatar_url = updateAvatarDto.avatar_url;
+    }
+    this.logger.log(`updateAvatar: userId: ${userId}, user.profile.avatar_url: ${user.profile.avatar_url}`);
+
+    await this.userProfileRepository.save(user.profile);
+
+    return { message: 'Avatar actualizado correctamente', avatar_url: user.profile.avatar_url };
   }
 
   /*async findMyTestimonios(userId: string): Promise<Testimonio[]> {
