@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { ConfigModule } from "@nestjs/config";
 import { Embed } from "./entities/embed.entity";
 import { Testimonio } from "../testimonios/entities/testimonio.entity";
 import { EmbedbController } from "./embedb.controller";
@@ -9,7 +10,8 @@ import { TestimoniosModule } from "../../modules/testimonios/testimonios.module"
 @Module({
     imports: [
         TypeOrmModule.forFeature([Embed, Testimonio]), 
-        TestimoniosModule
+        TestimoniosModule,
+        ConfigModule, // Agregado para usar ConfigService
     ],
     controllers: [EmbedbController],
     providers: [EmbedService],

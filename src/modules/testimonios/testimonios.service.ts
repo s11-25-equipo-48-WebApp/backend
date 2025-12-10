@@ -21,6 +21,9 @@ import { UserProfile } from '../auth/entities/userProfile.entity';
 
 @Injectable()
 export class TestimoniosService {
+    findAllApprovedByOrganization(organizationId: string) {
+        throw new Error("Method not implemented.");
+    }
     constructor(
         private readonly repo: TestimonioRepository,
         @InjectRepository(AuditLog)
