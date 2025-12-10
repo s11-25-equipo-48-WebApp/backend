@@ -133,6 +133,11 @@ export class OrganizationService {
         // if (existingMember) {
         //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
         // }
+        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
+
+        if (user.organizations[0].role === Role.ADMIN && addMemberDto.role === Role.ADMIN) {
+            throw new BadRequestException('No puedes agregar un admin a una organización.');
+        }
 
         const newMember = this.organizationUserRepository.create({
             organization,
@@ -161,6 +166,12 @@ export class OrganizationService {
         //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
         // }
 
+        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
+
+        if (user.organizations[0].role === Role.ADMIN && role === Role.ADMIN) {
+            throw new BadRequestException('No puedes agregar un admin a una organización.');
+        }
+
         const newMember = this.organizationUserRepository.create({
             organization,
             user,
@@ -187,6 +198,12 @@ export class OrganizationService {
         // if (existingMember) {
         //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
         // }
+
+        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
+
+        if (user.organizations[0].role === Role.ADMIN && role === Role.ADMIN) {
+            throw new BadRequestException('No puedes agregar un admin a una organización.');
+        }
 
         const newMember = this.organizationUserRepository.create({
             organization,
@@ -218,6 +235,12 @@ export class OrganizationService {
             throw new NotFoundException(`Miembro con ID de usuario ${userId} no encontrado en la organización ${organizationId}.`);
         }
         member.role = updateRoleDto.role;
+
+        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
+
+        if (member.user.organizations[0].role === Role.ADMIN && updateRoleDto.role === Role.ADMIN) {
+            throw new BadRequestException('No puedes agregar un admin a una organización.');
+        }
         return this.organizationUserRepository.save(member);
     }
 

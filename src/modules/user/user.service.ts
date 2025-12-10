@@ -8,7 +8,7 @@ import { Testimonio } from 'src/modules/testimonios/entities/testimonio.entity';
 import { UpdateTestimonioStatusDto } from './dto/update-testimonio-status.dto';
 import { User } from '../auth/entities/user.entity';
 import { UserProfile } from '../auth/entities/userProfile.entity';
-import { Status } from '../organization/entities/enums';
+import { Role, Status } from '../organization/entities/enums';
 import { AuthToken } from '../auth/entities/authToken.entity';
 import { UpdateAvatarDto } from './dto/updateAvatar.dto';
 import { profile } from 'console';
@@ -161,6 +161,12 @@ export class UserService {
       throw new ConflictException('User is already a member of this organization.');
     }
 
+    //evitar a que se agregue un admin a una organizacion
+
+    if (user.organizations[0].role === Role.ADMIN) {
+      throw new BadRequestException('No puedes agregar un admin a una organización.');
+    }
+
     const organizationUser = this.organizationUserRepository.create({
       user,
       organization,
@@ -176,6 +182,12 @@ export class UserService {
 
     if (!membership) {
       throw new NotFoundException('Membership not found or user is not part of this organization.');
+    }
+
+    //evitar a que se agregue un admin a una organizacion
+
+    if (membership.user.organizations[0].role === Role.ADMIN) {
+      throw new BadRequestException('No puedes agregar un admin a una organización.');
     }
 
     await this.organizationUserRepository.remove(membership);
@@ -208,31 +220,4 @@ export class UserService {
 
     return { message: 'Avatar actualizado correctamente', avatar_url: user.profile.avatar_url };
   }
-
-  /*async findMyTestimonios(userId: string): Promise<Testimonio[]> {
-    return this.testimonioRepository.find({
-      where: { author: { id: userId } },
-      relations: ['category', 'tags'], // Cargar relaciones si es necesario
-    });
-  }
-
-  async updateMyTestimonioStatus(userId: string, testimonioId: string, updateStatusDto: UpdateTestimonioStatusDto): Promise<Testimonio> {
-    const testimonio = await this.testimonioRepository.findOne({
-      where: { id: testimonioId, author: { id: userId } },
-    });
-
-    if (!testimonio) {
-      throw new NotFoundException(`Testimonio with ID "${testimonioId}" not found or does not belong to user.`);
-    }
-
-    // Aquí se asume que el usuario puede cambiar el estado a borrador o similar.
-    // Si hay restricciones de estado (ej. solo ADMIN puede aprobar), esto debería estar en una capa de autorización.
-    testimonio.status = updateStatusDto.status;
-    if (updateStatusDto.status === Status.PENDIENTE) {
-      // Si se cambia a PENDIENTE, se puede asumir que sale del borrador y está listo para revisión.
-      // O puedes tener un estado específico de 'BORRADOR'
-    }
-
-    return this.testimonioRepository.save(testimonio);
-  }*/
 }
