@@ -66,9 +66,9 @@ export class EmbedService {
 
         const { width = "600", height = "400", theme = "light", autoplay = false } = query;
         const baseUrl = "https://backend-jnqc.onrender.com"
-        
+
         // URL que apunta al endpoint que renderiza el contenido
-        const contentUrl = `${baseUrl}/api/v1/api/public/embed/content/${id}?organizationId=${organizationId}&width=${width}&height=${height}&theme=${theme}&autoplay=${autoplay}`;
+        const contentUrl = `${baseUrl}/api/v1/public/embed/content/${id}?organizationId=${organizationId}&width=${width}&height=${height}&theme=${theme}&autoplay=${autoplay}`;
 
         return `<iframe src="${contentUrl}" width="${width}" height="${height}" frameborder="0" allowfullscreen loading="lazy" style="border: 1px solid ${theme === "dark" ? "#555" : "#ccc"}; border-radius: 8px;"></iframe>`;
     }
@@ -79,8 +79,8 @@ export class EmbedService {
     async generateOrganizationIframeCode(organizationId: string, query: GetEmbedQueryWithoutOrgDto): Promise<string> {
         const { width = "600", height = "600", theme = "light" } = query;
         const baseUrl = "https://backend-jnqc.onrender.com"
-        
-        const contentUrl = `${baseUrl}/api/v1/api/public/embed/organization/${organizationId}/testimonios?width=${width}&height=${height}&theme=${theme}`;
+
+        const contentUrl = `${baseUrl}/api/v1/public/embed/organization/${organizationId}/testimonios?width=${width}&height=${height}&theme=${theme}`;
 
         return `<iframe src="${contentUrl}" width="${width}" height="${height}" frameborder="0" loading="lazy" style="border: 1px solid ${theme === "dark" ? "#555" : "#ccc"}; border-radius: 8px;"></iframe>`;
     }
@@ -91,8 +91,8 @@ export class EmbedService {
     async generateOrganizationIframeCodeWithLimit(organizationId: string, query: GetEmbedWithLimitQueryDto): Promise<string> {
         const { width = "600", height = "600", theme = "light", limit = 5 } = query;
         const baseUrl = "https://backend-jnqc.onrender.com"
-        
-        const contentUrl = `${baseUrl}/api/v1/api/public/embed/organization/${organizationId}/testimonios/limited?width=${width}&height=${height}&theme=${theme}&limit=${limit}`;
+
+        const contentUrl = `${baseUrl}/api/v1/public/embed/organization/${organizationId}/testimonios/limited?width=${width}&height=${height}&theme=${theme}&limit=${limit}`;
 
         return `<iframe src="${contentUrl}" width="${width}" height="${height}" frameborder="0" loading="lazy" style="border: 1px solid ${theme === "dark" ? "#555" : "#ccc"}; border-radius: 8px;"></iframe>`;
     }
@@ -103,7 +103,7 @@ export class EmbedService {
      */
     async generateSingleTestimonialHtml(id: string, organizationId: string, query: GetEmbedQueryDto): Promise<string> {
         const testimonio = await this.findApprovedPublicById(id, organizationId);
-        
+
         if (!testimonio) {
             throw new NotFoundException("Testimonio no encontrado o no está aprobado");
         }
@@ -111,7 +111,7 @@ export class EmbedService {
         const { theme = "light", autoplay = false, showAvatar = true, showVehicle = true } = query;
         const backgroundColor = theme === "dark" ? "#1a1a1a" : "#ffffff";
         const textColor = theme === "dark" ? "#ffffff" : "#333333";
-        
+
         const testimonialCard = this.generateTestimonialCard(testimonio, { theme, autoplay, showAvatar, showVehicle });
 
         return `
@@ -281,7 +281,7 @@ export class EmbedService {
         const backgroundColor = theme === "dark" ? "#1a1a1a" : "#ffffff";
         const textColor = theme === "dark" ? "#ffffff" : "#333333";
 
-        const testimoniosHtml = testimonios.map((t, index) => 
+        const testimoniosHtml = testimonios.map((t, index) =>
             this.generateTestimonialCard(t, { theme, autoplay, showAvatar, showVehicle, index })
         ).join("\n");
 
@@ -303,7 +303,7 @@ export class EmbedService {
         const backgroundColor = theme === "dark" ? "#1a1a1a" : "#ffffff";
         const textColor = theme === "dark" ? "#ffffff" : "#333333";
 
-        const testimoniosHtml = testimonios.map((t, index) => 
+        const testimoniosHtml = testimonios.map((t, index) =>
             this.generateTestimonialCard(t, { theme, autoplay, showAvatar, showVehicle, index })
         ).join("\n");
 
@@ -477,13 +477,13 @@ export class EmbedService {
      * Genera una tarjeta HTML individual de testimonio
      */
     private generateTestimonialCard(
-        testimonio: Testimonio, 
-        options: { 
-            theme: "light" | "dark", 
-            autoplay: boolean, 
-            showAvatar: boolean, 
+        testimonio: Testimonio,
+        options: {
+            theme: "light" | "dark",
+            autoplay: boolean,
+            showAvatar: boolean,
             showVehicle: boolean,
-            index?: number 
+            index?: number
         }
     ): string {
         const { theme, autoplay, showAvatar, showVehicle } = options;
