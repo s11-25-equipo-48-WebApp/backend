@@ -6,7 +6,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { ApiOperation, ApiTags, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags("Embed - Testimonios Incrustables")
-@Controller("api/public/embed")
+@Controller("public/embed")
 export class EmbedbController {
     constructor(
         private readonly embedService: EmbedService,
