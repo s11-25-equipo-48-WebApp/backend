@@ -16,6 +16,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Query } from '@nestjs/common';
@@ -42,7 +43,9 @@ export class TagsController {
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: 'Listar tags' })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
-  @ApiOkResponse({ type: [Tag] })
+  @ApiOkResponse({ description: 'Listado de tags', type: [Tag] })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
   async findAll(
     @Param('organizationId') organizationId: string,
     @Req() req,
@@ -57,6 +60,9 @@ export class TagsController {
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiBody({ type: CreateTagDto })
   @ApiCreatedResponse({ description: 'Tag creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o tag duplicado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
   async create(@Param('organizationId') organizationId: string, @Body() dto: CreateTagDto, @Req() req) {
     return await this.service.create(dto, req.user, organizationId);
   }
@@ -67,6 +73,9 @@ export class TagsController {
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiOkResponse({ description: 'Tag encontrado', type: Tag })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Tag no encontrado' })
   async findOne(@Param('organizationId') organizationId: string, @Param('id') id: string, @Req() req) {
     return await this.service.findOne(id, req.user, organizationId);
   }
@@ -78,6 +87,10 @@ export class TagsController {
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiBody({ type: UpdateTagDto })
   @ApiOkResponse({ description: 'Tag actualizado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o name duplicado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Tag no encontrado' })
   async update(@Param('organizationId') organizationId: string, @Param('id') id: string, @Body() dto: UpdateTagDto, @Req() req) {
     return await this.service.update(id, dto, req.user, organizationId);
   }
@@ -88,6 +101,9 @@ export class TagsController {
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del tag (uuid)' })
   @ApiOkResponse({ description: 'Tag eliminado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Tag no encontrado' })
   async remove(@Param('organizationId') organizationId: string, @Param('id') id: string, @Req() req) {
     return await this.service.delete(id, req.user, organizationId);
   }

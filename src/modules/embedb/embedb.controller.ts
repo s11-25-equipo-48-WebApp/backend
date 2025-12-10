@@ -13,12 +13,12 @@ export class EmbedbController {
     ) { }
 
     // ==================== ENDPOINTS PARA OBTENER CÓDIGO IFRAME ====================
-    
+
     /**
      * Genera el código iframe para incrustar un testimonio individual
      * Este es el código que el usuario copiará y pegará en su sitio web
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Obtener código iframe para un testimonio individual",
         description: "Retorna el código HTML completo del iframe que el usuario debe copiar y pegar en su sitio web para mostrar un testimonio específico."
     })
@@ -40,12 +40,13 @@ export class EmbedbController {
     /**
      * Genera el código iframe para incrustar todos los testimonios de una organización
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Obtener código iframe para testimonios de una organización",
         description: "Retorna el código HTML completo del iframe para mostrar todos los testimonios aprobados de una organización."
     })
     @ApiParam({ name: "organizationId", description: "ID de la organización" })
     @ApiResponse({ status: 200, description: "Código iframe generado exitosamente" })
+    @ApiResponse({ status: 404, description: "Organización no encontrada o sin testimonios aprobados" })
     @Public()
     @Get("code/organization/:organizationId/testimonios")
     @Header("Content-Type", "text/plain; charset=utf-8")
@@ -62,13 +63,16 @@ export class EmbedbController {
      * 🆕 NUEVO: Genera el código iframe con límite personalizado de testimonios
      * El usuario puede especificar cuántos testimonios quiere mostrar (1-20)
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Obtener código iframe con límite de testimonios",
         description: "Retorna el código iframe para mostrar una cantidad específica de testimonios (1-20). Ideal para mostrar solo los últimos N testimonios."
     })
     @ApiParam({ name: "organizationId", description: "ID de la organización" })
     @ApiQuery({ name: "limit", required: false, description: "Cantidad de testimonios a mostrar (1-20)", example: 5 })
     @ApiResponse({ status: 200, description: "Código iframe generado exitosamente" })
+    @ApiResponse({ status: 400, description: "Parámetro limit inválido" })
+    @ApiResponse({ status: 404, description: "Organización no encontrada" })
+
     @Public()
     @Get("code/organization/:organizationId/testimonios/limited")
     @Header("Content-Type", "text/plain; charset=utf-8")
@@ -82,12 +86,12 @@ export class EmbedbController {
     }
 
     // ==================== ENDPOINTS PARA RENDERIZAR CONTENIDO ====================
-    
+
     /**
      * Renderiza el HTML de un testimonio individual
      * Este endpoint es llamado automáticamente por el iframe
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Renderizar contenido HTML de un testimonio individual",
         description: "Este endpoint es usado internamente por el iframe para mostrar el contenido del testimonio. No debe ser llamado directamente por los usuarios."
     })
@@ -117,12 +121,13 @@ export class EmbedbController {
      * Renderiza el HTML de todos los testimonios de una organización
      * Este endpoint es llamado automáticamente por el iframe
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Renderizar contenido HTML de testimonios de una organización",
         description: "Este endpoint es usado internamente por el iframe para mostrar los testimonios de una organización. No debe ser llamado directamente por los usuarios."
     })
     @ApiParam({ name: "organizationId", description: "ID de la organización" })
-    @ApiResponse({ status: 200, description: "HTML de los testimonios renderizado" })
+    @ApiResponse({ status: 200, description: "HTML de testimonios renderizado" })
+    @ApiResponse({ status: 500, description: "Error interno al renderizar testimonios" })
     @Public()
     @Get("organization/:organizationId/testimonios")
     @Header("Content-Type", "text/html; charset=utf-8")
@@ -146,12 +151,13 @@ export class EmbedbController {
      * 🆕 NUEVO: Renderiza el HTML con límite de testimonios
      * Este endpoint es llamado automáticamente por el iframe
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Renderizar contenido HTML con límite de testimonios",
         description: "Este endpoint es usado internamente por el iframe para mostrar una cantidad limitada de testimonios."
     })
     @ApiParam({ name: "organizationId", description: "ID de la organización" })
-    @ApiResponse({ status: 200, description: "HTML de los testimonios renderizado" })
+    @ApiResponse({ status: 200, description: "HTML renderizado con límite" })
+    @ApiResponse({ status: 500, description: "Error interno al renderizar testimonios" })
     @Public()
     @Get("organization/:organizationId/testimonios/limited")
     @Header("Content-Type", "text/html; charset=utf-8")
@@ -177,11 +183,12 @@ export class EmbedbController {
      * Obtiene lista de testimonios aprobados (JSON)
      * Útil para previsualización o debugging
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Listar testimonios aprobados de una organización (JSON)",
         description: "Retorna un JSON con los testimonios aprobados. Útil para debugging o crear previsualización personalizada."
     })
-    @ApiResponse({ status: 200, description: "Lista de testimonios en formato JSON" })
+    @ApiResponse({ status: 200, description: "Lista de testimonios aprobados (JSON)" })
+    @ApiResponse({ status: 404, description: "Organización no encontrada o sin testimonios" })
     @Public()
     @Get("data/organization/:organizationId/testimonios")
     async getOrganizationTestimonialsData(
@@ -207,12 +214,12 @@ export class EmbedbController {
     /**
      * Obtiene un testimonio individual (JSON)
      */
-    @ApiOperation({ 
+    @ApiOperation({
         summary: "Obtener un testimonio individual (JSON)",
         description: "Retorna los datos de un testimonio específico en formato JSON."
     })
-    @ApiResponse({ status: 200, description: "Datos del testimonio" })
-    @ApiResponse({ status: 404, description: "Testimonio no encontrado" })
+    @ApiResponse({ status: 200, description: "Testimonio encontrado" })
+    @ApiResponse({ status: 404, description: "Testimonio no encontrado o no aprobado" })
     @Public()
     @Get("data/testimonio/:id")
     async getSingleTestimonialData(
@@ -220,7 +227,7 @@ export class EmbedbController {
         @Query("organizationId") organizationId: string
     ) {
         const testimonio = await this.embedService.findApprovedPublicById(id, organizationId);
-        
+
         if (!testimonio) {
             return {
                 success: false,

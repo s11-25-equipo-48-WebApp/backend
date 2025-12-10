@@ -1,5 +1,5 @@
 import {
-  BadRequestException, // Asegurar que BadRequestException esté importado
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -10,15 +10,16 @@ import {
   Req,
   ValidationPipe,
   UseGuards,
-  Delete, // Importar Delete
+  Delete,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth, // Importar ApiBearerAuth
+  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { TestimoniosService } from './testimonios.service';
@@ -66,6 +67,9 @@ export class TestimoniosController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
   async create(
     @Param('organizationId') organizationId: string,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
@@ -118,6 +122,10 @@ export class TestimoniosController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
   async update(
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -150,6 +158,10 @@ export class TestimoniosController {
       }
     }
   })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o transición no permitida' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
   async updateStatus(
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -183,6 +195,9 @@ export class TestimoniosController {
       }
     }
   })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
   async softDelete(
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -191,7 +206,7 @@ export class TestimoniosController {
     const user = req.user;
     return this.testimoniosService.softDelete(id, user, organizationId);
   }
-
+  
   @Get('public')
   @ApiOperation({
     summary: 'Obtener testimonios públicos',
@@ -199,6 +214,8 @@ export class TestimoniosController {
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Lista de testimonios públicos' })
+  @ApiOkResponse({ description: 'Lista de testimonios públicos' })
+  @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
   async findPublic(
     @Param('organizationId') organizationId: string,
     @Query() query: GetTestimoniosQueryDto
@@ -219,6 +236,8 @@ export class TestimoniosController {
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiOkResponse({ description: 'Lista de testimonios pendientes' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
   async findPending(
     @Param('organizationId') organizationId: string,
     @Query('page') page: number = 1,
@@ -235,6 +254,8 @@ export class TestimoniosController {
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
   @ApiOkResponse({ description: 'Testimonio' })
+  @ApiOkResponse({ description: 'Testimonio encontrado' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
   async findById(
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,

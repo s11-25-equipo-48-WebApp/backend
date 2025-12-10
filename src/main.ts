@@ -14,9 +14,11 @@ import { NestExpressApplication } from '@nestjs/platform-express'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
   console.log('[MAIN] App bootstrap iniciada');
 
   const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT') || 3002;
 
   // ------------ COOKIE PARSER ------------
   app.use(cookieParser());
@@ -65,8 +67,13 @@ async function bootstrap() {
 
   // ------------ SWAGGER ------------
   const opts = new DocumentBuilder()
+    .addCookieAuth()
+    .setVersion('1.0')
     .setTitle('CMS API')
     .setDescription('Documentación API para el CMS')
+    .setBasePath('api/v1')
+    .addServer('http://localhost:3002')
+    .addServer('https://backend-jnqc.onrender.com')
     .setVersion('1.0')
     .addTag('cms')
     .addBearerAuth(
@@ -81,10 +88,9 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, doc);
 
   // ------------ START SERVER ------------
-  const port = configService.get<number>('PORT') || 3002;
   app.useStaticAssets(join(__dirname, '..', 'public', 'static'), {
-  prefix: '/static/',
-});
+    prefix: '/static/',
+  });
 
   await app.listen(port);
   console.log(`🚀 Server running on port ${port}`);

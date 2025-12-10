@@ -1,15 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, HttpCode, HttpStatus, UnauthorizedException, Logger, Put } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from 'src/jwt/jwt.guard';
-import type { RequestWithUser } from 'src/common/interfaces/RequestWithUser';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JoinOrganizationDto } from './dto/join-organization.dto';
-import { UpdateTestimonioStatusDto } from './dto/update-testimonio-status.dto';
-import type { Response } from 'express';
-import { Roles } from 'src/common/decorators/roles.decorator';
-import { Role } from '../organization/entities/enums';
-import { TestimonioRolesGuard } from 'src/common/guards/testimonio-roles.guard';
 import { UpdateAvatarDto } from './dto/updateAvatar.dto';
 
 @ApiTags('user')
@@ -121,36 +115,4 @@ export class UserController {
     }
     return this.userService.updateAvatar(req.user.id, updateAvatarDto);
   }
-
-
-  /*@Get('testimonios')
-  @ApiOperation({ summary: 'Obtener todos los testimonios del usuario' })
-  @ApiResponse({ status: 200, description: 'Lista de testimonios del usuario.' })
-  @ApiResponse({ status: 401, description: 'No autorizado.' })
-  async findMyTestimonios(@Req() req) {
-    const user = req.user;
-    Logger.log(`findMyTestimonios: userId: ${user.id}`);
-    if (!user || !user.id) {
-      throw new UnauthorizedException('Usuario no autenticado.');
-    }
-    return this.userService.findMyTestimonios(req.user.id);
-  }
-
-  @Patch('testimonios/:id/status')
-  @UseGuards(JwtAuthGuard, TestimonioRolesGuard)
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: 'Actualizar el estado de un testimonio (Solo ADMIN o SUPERADMIN)' })
-  @ApiResponse({ status: 200, description: 'El estado del testimonio ha sido actualizado.' })
-  @ApiResponse({ status: 401, description: 'No autorizado.' })
-  @ApiResponse({ status: 403, description: 'No tienes permisos suficientes (se requiere rol ADMIN o SUPERADMIN).' })
-  @ApiResponse({ status: 404, description: 'Testimonio no encontrado.' })
-  @ApiBody({ type: UpdateTestimonioStatusDto, description: 'Nuevo estado del testimonio' })
-  async updateMyTestimonioStatus(@Req() req, @Param('id') testimonioId: string, @Body() updateStatusDto: UpdateTestimonioStatusDto) {
-    const user = req.user;
-    Logger.log(`findMyTestimonios: userId: ${user.id}`);
-    if (!user || !user.id) {
-      throw new UnauthorizedException('Usuario no autenticado.');
-    }
-    return this.userService.updateMyTestimonioStatus(req.user.id, testimonioId, updateStatusDto);
-  }*/
 }

@@ -24,6 +24,10 @@ import {
   ApiParam,
   ApiBadRequestResponse,
   ApiQuery,
+  ApiUnauthorizedResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
 } from "@nestjs/swagger";
 
 import { OrganizationService } from "./organization.service";
@@ -53,7 +57,7 @@ export class OrganizationController {
   constructor(
     private readonly organizationService: OrganizationService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // ======================================================
   // PUBLIC ENDPOINT: LIST PUBLIC ORGANIZATIONS
@@ -63,9 +67,8 @@ export class OrganizationController {
   @ApiOperation({ summary: "Lista paginada pública de organizaciones" })
   @ApiQuery({ name: "page", required: false, type: Number, example: 1 })
   @ApiQuery({ name: "limit", required: false, type: Number, example: 20 })
-  @ApiOkResponse({
-    description: "Organizaciones públicas con ID, nombre y descripción",
-  })
+  @ApiOkResponse({ description: "Organizaciones públicas devueltas correctamente" })
+  @ApiBadRequestResponse({ description: "Parámetros inválidos" })
   async getAllPublicOrganizations(@Query() query: GetOrganizationsQueryDto) {
     return this.organizationService.findAllOrganizationsPublic(query.page, query.limit);
   }
@@ -78,6 +81,7 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @ApiOperation({ summary: "Organizaciones del usuario autenticado" })
   @ApiOkResponse({ type: [OrganizationMemberDto] })
+  @ApiUnauthorizedResponse({ description: "Token inválido o ausente" })
   async getMyOrganizations(@Req() req) {
     const { user } = req;
     new Logger(`getMyOrganizations: userId=${user?.id}`);
@@ -92,11 +96,11 @@ export class OrganizationController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("access-token")
-  @ApiOperation({ summary: "Crear una organización y asignar al usuario" })
+  @ApiOperation({ summary: "Crear organización" })
   @ApiBody({ type: CreateOrganizationDto })
-  @ApiBadRequestResponse({
-    description: "Conflictos por nombre duplicado o usuario ya perteneciente",
-  })
+  @ApiCreatedResponse({ description: "Organización creada correctamente" })
+  @ApiBadRequestResponse({ description: "Validación fallida o conflictos" })
+  @ApiUnauthorizedResponse({ description: "Usuario no autenticado" })
   async createOrganization(
     @Body() dto: CreateOrganizationDto,
     @Req() req,
@@ -140,6 +144,10 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @ApiOperation({ summary: "Detalles de una organización" })
   @ApiParam({ name: "organizationId", type: "string" })
+  @ApiOkResponse({ description: "Detalles devueltos correctamente" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async getOrganizationDetails(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
   ) {
@@ -154,6 +162,11 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Actualizar organización" })
+  @ApiOkResponse({ description: "Organización actualizada correctamente" })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async updateOrganization(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Body() dto: UpdateOrganizationDto,
@@ -169,6 +182,10 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Eliminar organización" })
+  @ApiOkResponse({ description: "Organización eliminada correctamente" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async deleteOrganization(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
   ) {
@@ -185,6 +202,10 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Agregar miembro" })
   @ApiBody({ type: AddOrganizationMemberDto })
+  @ApiCreatedResponse({ description: "Miembro agregado correctamente" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiBadRequestResponse()
   async addMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Body() dto: AddOrganizationMemberDto,
@@ -210,6 +231,10 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Eliminar miembro" })
+  @ApiOkResponse({ description: "Miembro eliminado" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async removeMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
@@ -243,7 +268,11 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: "Actualizar rol" })
+  @ApiOperation({ summary: "Actualizar rol de miembro" })
+  @ApiOkResponse({ description: "Rol actualizado" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async updateMemberRole(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
@@ -283,6 +312,10 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Registrar miembro por ID o email" })
   @ApiBody({ type: CreateOrganizationMemberDto })
+  @ApiCreatedResponse({ description: "Miembro registrado correctamente" })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
   async registerMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Body() dto: CreateOrganizationMemberDto,
@@ -314,6 +347,9 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Detalles de un miembro" })
   @ApiOkResponse({ type: OrganizationMemberDto })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async getMemberDetails(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
@@ -330,6 +366,9 @@ export class OrganizationController {
   @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({ summary: "Listar miembros" })
   @ApiOkResponse({ type: [OrganizationMemberDto] })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async getOrganizationMembers(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
   ) {
@@ -343,7 +382,11 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: "Solicitudes pendientes" })
+  @ApiOperation({ summary: "Solicitudes pendientes de unión" })
+  @ApiOkResponse({ description: "Solicitudes pendientes devueltas" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async getPendingMembers(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
   ) {
@@ -358,6 +401,10 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Aprobar solicitud de unión" })
+  @ApiOkResponse({ description: "Solicitud aprobada" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async approveMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
@@ -374,6 +421,10 @@ export class OrganizationController {
   @ApiBearerAuth("access-token")
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({ summary: "Rechazar solicitud de unión" })
+  @ApiOkResponse({ description: "Solicitud rechazada" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
   async rejectMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
