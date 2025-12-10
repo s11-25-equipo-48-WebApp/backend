@@ -116,7 +116,7 @@ export class AuthService {
 
     return this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
+      expiresIn: '1000h',
     });
   }
 
@@ -191,7 +191,7 @@ export class AuthService {
     // Firmar tokens
     const accessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
+      expiresIn: '1000h',
     });
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
@@ -257,7 +257,7 @@ export class AuthService {
 
     const newAccessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
+      expiresIn: '1000h',
     });
 
     // Crear el registro del token primero para obtener el ID
