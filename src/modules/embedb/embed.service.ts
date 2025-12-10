@@ -65,7 +65,7 @@ export class EmbedService {
         }
 
         const { width = "600", height = "400", theme = "light", autoplay = false } = query;
-        const baseUrl = this.configService.get<string>("API_URL") || "http://localhost:3002";
+        const baseUrl = "https://backend-jnqc.onrender.com"
         
         // URL que apunta al endpoint que renderiza el contenido
         const contentUrl = `${baseUrl}/api/v1/api/public/embed/content/${id}?organizationId=${organizationId}&width=${width}&height=${height}&theme=${theme}&autoplay=${autoplay}`;
@@ -78,7 +78,7 @@ export class EmbedService {
      */
     async generateOrganizationIframeCode(organizationId: string, query: GetEmbedQueryWithoutOrgDto): Promise<string> {
         const { width = "600", height = "600", theme = "light" } = query;
-        const baseUrl = this.configService.get<string>("API_URL") || "http://localhost:3002";
+        const baseUrl = "https://backend-jnqc.onrender.com"
         
         const contentUrl = `${baseUrl}/api/v1/api/public/embed/organization/${organizationId}/testimonios?width=${width}&height=${height}&theme=${theme}`;
 
@@ -90,7 +90,7 @@ export class EmbedService {
      */
     async generateOrganizationIframeCodeWithLimit(organizationId: string, query: GetEmbedWithLimitQueryDto): Promise<string> {
         const { width = "600", height = "600", theme = "light", limit = 5 } = query;
-        const baseUrl = this.configService.get<string>("API_URL") || "http://localhost:3002";
+        const baseUrl = "https://backend-jnqc.onrender.com"
         
         const contentUrl = `${baseUrl}/api/v1/api/public/embed/organization/${organizationId}/testimonios/limited?width=${width}&height=${height}&theme=${theme}&limit=${limit}`;
 
