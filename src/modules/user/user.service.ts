@@ -65,67 +65,57 @@ export class UserService {
   }
 
   async updateMe(userId: string, updateUserDto: UpdateUserDto): Promise<any> {
-    this.logger.log(`updateMe: userId: ${userId}`);
+  this.logger.log(`updateMe: userId: ${userId}`);
 
-    try {
-      // Buscar el usuario con su perfil
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-        relations: ['profile'],
-      });
+  try {
+    // Buscar el usuario con su perfil
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
 
-      if (!user) {
-        throw new NotFoundException(`User with ID "${userId}" not found`);
-      }
-
-      // Separar los datos del usuario y del perfil
-      const { avatar_url, bio, metadata, ...userData } = updateUserDto;
-
-      // Actualizar datos del usuario (name, email)
-      // if (Object.keys(userData).length > 0) {
-      //   Object.assign(user, userData);
-      //   await this.userRepository.save(user);
-      // }
-
-      // Actualizar o crear el perfil si hay datos de perfil
-      if (avatar_url !== undefined || bio !== undefined || metadata !== undefined) {
-        if (user.profile) {
-          // Actualizar perfil existente
-          if (avatar_url !== undefined) user.profile.avatar_url = avatar_url;
-          if (bio !== undefined) user.profile.bio = bio;
-          if (metadata !== undefined) user.profile.metadata = metadata;
-
-          await this.userProfileRepository.save(user.profile);
-        } else {
-          // Crear nuevo perfil
-          const newProfile = this.userProfileRepository.create({
-            user_id: userId,
-            avatar_url: avatar_url || null,
-            bio: bio || '',
-          });
-
-          await this.userProfileRepository.save(newProfile);
-        }
-      }
-
-      // Retornar el usuario actualizado con su perfil
-      return this.userRepository.findOne({
-        where: { id: userId },
-        relations: ['profile'],
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          is_active: true,
-          created_at: true,
-          updated_at: true,
-        }
-      });
-    } catch (error) {
-      this.logger.error(`Error en updateMe: ${error.message}`, error.stack);
-      throw error;
+    if (!user) {
+      throw new NotFoundException(`User with ID "${userId}" not found`);
     }
+
+    const { avatar_url, ...userData } = updateUserDto;
+
+    // ------------------------------------
+    // Actualizar datos del usuario
+    // ------------------------------------
+    if (userData.name !== undefined) {
+      user.name = userData.name;
+    }
+
+    if (userData.last_name !== undefined) {
+      user.last_name = userData.last_name;
+    }
+
+    // Guardar siempre el usuario (actualiza updated_at)
+    await this.userRepository.save(user);
+
+    // ------------------------------------
+    // Actualizar / crear el perfil
+    // ------------------------------------
+    if (avatar_url !== undefined) {
+      if (user.profile) {
+        user.profile.avatar_url = avatar_url;
+        await this.userProfileRepository.save(user.profile);
+      }
+    }
+
+    // Retornar el usuario actualizado con su perfil
+    return this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile']
+    });
+
+  } catch (error) {
+    this.logger.error(`Error en updateMe: ${error.message}`, error.stack);
+    throw error;
   }
+}
+
 
   async removeMe(id: string): Promise<void> {
     const result = await this.userRepository.delete(id);
@@ -200,12 +190,10 @@ export class UserService {
     }
 
     if (!user.profile || !user.profile.avatar_url) {
-      user.profile = this.userProfileRepository.create({ 
+      user.profile = this.userProfileRepository.create({
         user_id: userId,
         avatar_url: updateAvatarDto.avatar_url || '',
-        bio: '',
-        metadata: {},
-       });
+      });
     }
     this.logger.log(`updateAvatar: userId: ${userId}, user.profile: ${user.profile}`);
 

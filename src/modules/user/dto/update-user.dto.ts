@@ -3,13 +3,22 @@ import { IsOptional, IsString, IsEmail, IsObject } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({ 
-    example: 'Juan Pérez', 
+    example: 'Juan ', 
     description: 'Nombre del usuario', 
     required: false 
   })
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiProperty({ 
+    example: 'Perez', 
+    description: 'Apellido del usuario',
+    required: false 
+  })
+  @IsOptional()
+  @IsString()
+  last_name?: string;
 
   @ApiProperty({ 
     example: 'nuevo.email@example.com', 
@@ -30,21 +39,21 @@ export class UpdateUserDto {
   @IsString()
   avatar_url?: string;
 
-  @ApiProperty({ 
-    example: 'Desarrollador apasionado por la tecnología', 
-    description: 'Biografía del usuario', 
-    required: false 
-  })
-  @IsOptional()
-  @IsString()
-  bio?: string;
+  // @ApiProperty({ 
+  //   example: 'Desarrollador apasionado por la tecnología', 
+  //   description: 'Biografía del usuario', 
+  //   required: false 
+  // })
+  // @IsOptional()
+  // @IsString()
+  // bio?: string;
 
-  @ApiProperty({ 
-    example: { theme: 'dark', notifications: true }, 
-    description: 'Metadatos adicionales del perfil', 
-    required: false 
-  })
-  @IsOptional()
-  @IsObject()
-  metadata?: any;
+  // @ApiProperty({ 
+  //   example: { theme: 'dark', notifications: true }, 
+  //   description: 'Metadatos adicionales del perfil', 
+  //   required: false 
+  // })
+  // @IsOptional()
+  // @IsObject()
+  // metadata?: any;
 }
