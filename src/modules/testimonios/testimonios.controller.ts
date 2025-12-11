@@ -263,19 +263,4 @@ export class TestimoniosController {
     return this.testimoniosService.findById(id, organizationId);
   }
 
-  // @Get('all')
-  // @ApiOperation({
-  //   summary: 'Obtener todos los testimonios',
-  //   description: 'Obtener todos los testimonios de una organización. Solo para administradores.',
-  // })
-  // @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
-  // @ApiOkResponse({ description: 'Lista de testimonios' })
-  // @ApiResponse({ status: 401, description: 'No autorizado' })
-  // @ApiResponse({ status: 403, description: 'No autorizado' })
-  // async findAll(
-  //   @Param('organizationId') organizationId: string,
-  //   @Query() query: GetTestimoniosQueryDto,
-  // ) {
-  //   return this.testimoniosService.findAll(req.user, organizationId, query);
-  // }
 }
