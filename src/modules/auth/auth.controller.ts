@@ -114,6 +114,6 @@ export class AuthController {
     const { accessToken, refreshToken, ...user } =
       await this.authService.refresh(req.user);
 
-    return { accessToken, user };
+    return { accessToken, refreshToken };
   }
 }

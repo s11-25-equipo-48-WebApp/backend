@@ -3,10 +3,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt, StrategyOptionsWithRequest } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { AuthToken } from 'src/modules/auth/entities/authToken.entity';
+import { User } from 'src/modules/auth/entities/user.entity';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -16,8 +15,8 @@ export class JwtRefreshStrategy extends PassportStrategy(
   private readonly logger = new Logger(JwtRefreshStrategy.name);
 
   constructor(
-    @InjectRepository(AuthToken)
-    private readonly authTokenRepository: Repository<AuthToken>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
   ) {
     super({
@@ -32,60 +31,41 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
   async validate(req: Request, payload: any) {
     this.logger.log('[JWT REFRESH STRATEGY] Validando refresh token');
-    this.logger.log('[JWT REFRESH STRATEGY] Cookies disponibles:', Object.keys(req.cookies || {}));
-    
-    const refreshToken =
-      req.cookies && req.cookies['refresh-token']
-        ? req.cookies['refresh-token']
-        : null;
-
-    if (!refreshToken) {
-      this.logger.error('[JWT REFRESH STRATEGY] Refresh token no proporcionado en cookies');
-      throw new UnauthorizedException('Refresh token no proporcionado');
-    }
-    
-    this.logger.log('[JWT REFRESH STRATEGY] Refresh token encontrado en cookies');
     this.logger.log('[JWT REFRESH STRATEGY] Payload recibido:', JSON.stringify(payload));
 
     // ======================================
-    // 1. Buscar el token por payload.tokenId
+    // VALIDACIÓN SIMPLIFICADA:
+    // Solo verificar que el usuario exista y esté activo
+    // El JWT ya fue verificado por Passport (firma + expiración)
     // ======================================
-    const tokenInDb = await this.authTokenRepository.findOne({
-      where: { id: payload.tokenId, revoked: false },
-      relations: ['user'],
+    
+    const userId = payload.sub || payload.userId;
+    
+    if (!userId) {
+      this.logger.error('[JWT REFRESH STRATEGY] No se encontró userId en el payload');
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { 
+        id: userId,
+        is_active: true 
+      },
     });
 
-    if (!tokenInDb) {
-      this.logger.error(`[JWT REFRESH STRATEGY] Token no encontrado en DB para tokenId: ${payload.tokenId}`);
-      throw new UnauthorizedException(
-        'Refresh token inválido, revocado o no encontrado',
-      );
+    if (!user) {
+      this.logger.error(`[JWT REFRESH STRATEGY] Usuario no encontrado o inactivo: ${userId}`);
+      throw new UnauthorizedException('Usuario no válido');
     }
     
-    this.logger.log(`[JWT REFRESH STRATEGY] Token encontrado en DB para user: ${tokenInDb.user.id}`);
+    this.logger.log(`[JWT REFRESH STRATEGY] Usuario validado exitosamente: ${user.id}`);
 
     // ======================================
-    // 2. Comparar el token recibido con el hash
-    // ======================================
-    const isValid = await bcrypt.compare(
-      refreshToken,
-      tokenInDb.refresh_token_hash,
-    );
-
-    if (!isValid) {
-      this.logger.error('[JWT REFRESH STRATEGY] Refresh token no coincide con el hash');
-      throw new UnauthorizedException('Refresh token inválido');
-    }
-    
-    this.logger.log('[JWT REFRESH STRATEGY] Token válido, retornando usuario');
-
-    // ======================================
-    // 3. Devolver usuario + el token usado
+    // Retornar usuario validado
     // ======================================
     return {
-      id: tokenInDb.user.id,
-      email: tokenInDb.user.email,
-      authToken: tokenInDb,
+      id: user.id,
+      email: user.email,
       organizations: payload.organizations ?? [],
     };
   }

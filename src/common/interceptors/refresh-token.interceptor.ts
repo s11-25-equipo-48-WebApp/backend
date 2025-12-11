@@ -1,45 +1,62 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
-import { Logger } from '@nestjs/common';
-
 @Injectable()
 export class RefreshTokenInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(RefreshTokenInterceptor.name);
-  
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const ctx = context.switchToHttp();
+    const response = ctx.getResponse<Response>();
+
     return next.handle().pipe(
-      map(data => {
-        const response = context.switchToHttp().getResponse<Response>();
-        const isProd = this.configService.get('NODE_ENV') === 'production';
-
-        if (data.refreshToken) {
-          this.logger.log('[REFRESH TOKEN INTERCEPTOR] Estableciendo cookie refresh-token');
-          this.logger.log(`[REFRESH TOKEN INTERCEPTOR] isProd: ${isProd}`);
-          
-          response.cookie('refresh-token', data.refreshToken, {
-            httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? 'none' : 'lax',
-            path: '/',
-            expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-
-          });
-          
-          this.logger.log('[REFRESH TOKEN INTERCEPTOR] Cookie establecida correctamente');
-          
-          // Remove refreshToken from the response body sent to the client
-          const { refreshToken, ...result } = data;
-          return result;
+      map((data) => {
+        //
+        // 🔥 1. Verifica si existe refreshToken
+        //
+        if (!data?.refreshToken) {
+          return data; // <- No rompe nada, deja pasar la respuesta
         }
-        
-        this.logger.log('[REFRESH TOKEN INTERCEPTOR] No refreshToken en respuesta');
-        return data;
+
+        const refreshToken = data.refreshToken;
+
+        //
+        // 🔥 2. Obtener expiración desde configuración
+        //
+        const refreshTokenExpiresInDays = 7;
+
+        const expires = new Date(
+          Date.now() + refreshTokenExpiresInDays * 24 * 60 * 60 * 1000,
+        );
+
+        //
+        // 🔥 3. Setear cookie HttpOnly + Secure
+        //
+        response.cookie('refresh-token', refreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          expires,
+          path: '/',
+        });
+
+        //
+        // 🔥 4. Quitar refreshToken del response (seguridad)
+        //
+        const { refreshToken: _, ...rest } = data;
+
+        //
+        // 🔥 5. Devolver la respuesta limpia
+        //
+        return rest;
       }),
     );
   }
