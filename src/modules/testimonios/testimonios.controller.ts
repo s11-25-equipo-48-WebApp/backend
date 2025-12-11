@@ -11,6 +11,7 @@ import {
   ValidationPipe,
   UseGuards,
   Delete,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +20,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -32,6 +34,7 @@ import { JwtAuthGuard } from 'src/jwt/jwt.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '../organization/entities/enums';
+import { Testimonio } from './entities/testimonio.entity';
 
 @ApiTags('Testimonios')
 @Controller('organizations/:organizationId/testimonios')
@@ -182,7 +185,7 @@ export class TestimoniosController {
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   @ApiOperation({
     summary: 'Eliminar testimonio (soft delete)',
-    description: 'Marca un testimonio como eliminado lógicamente. Solo administradores y superadministradores pueden realizar esta acción.', // ✅ CAMBIO
+    description: 'Marca un testimonio como eliminado lógicamente. Solo administradores y superadministradores pueden realizar esta acción.',
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
@@ -207,13 +210,27 @@ export class TestimoniosController {
     return this.testimoniosService.softDelete(id, user, organizationId);
   }
   
+  @Get()
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @ApiOperation({ summary: 'Obtener todos los testimonios de una organización' })
+  @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
+  @ApiQuery({ name: 'page', required: false, description: 'Número de página' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Cantidad de items por página' })
+  @ApiOkResponse({ description: 'Lista de todos los testimonios', type: [Testimonio] })
+  @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
+  async findAllTestimonios(
+    @Param('organizationId') organizationId: string,
+    @Query() query: GetTestimoniosQueryDto
+  ) {
+    return this.testimoniosService.findAll(organizationId, query);
+  }
+
   @Get('public')
   @ApiOperation({
     summary: 'Obtener testimonios públicos',
     description: 'Obtener una lista paginada de testimonios aprobados, opcionalmente filtrados por categoría, etiqueta y organización.',
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
-  @ApiOkResponse({ description: 'Lista de testimonios públicos' })
   @ApiOkResponse({ description: 'Lista de testimonios públicos' })
   @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
   async findPublic(
@@ -253,7 +270,6 @@ export class TestimoniosController {
   })
   @ApiParam({ name: 'organizationId', description: 'ID de la organización (uuid)' })
   @ApiParam({ name: 'id', description: 'ID del testimonio (uuid)' })
-  @ApiOkResponse({ description: 'Testimonio' })
   @ApiOkResponse({ description: 'Testimonio encontrado' })
   @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
   async findById(

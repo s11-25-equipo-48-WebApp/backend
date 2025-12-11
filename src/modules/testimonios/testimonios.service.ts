@@ -15,7 +15,7 @@ import { Tag } from 'src/modules/tags/entities/tag.entity';
 //import { Role, Status } from '../auth/entities/enums';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from '../organization/entities/organization_user.entity';
-import { Role, Status,  } from '../organization/entities/enums';
+import { Role, Status, } from '../organization/entities/enums';
 import { UserProfile } from '../auth/entities/userProfile.entity';
 //import { Status} from '../organization/entities/enums'
 
@@ -327,7 +327,7 @@ export class TestimoniosService {
         // guardar
         const saved = await this.repo.save({
             ...existing,
-            status:  newStatus,
+            status: newStatus,
             //status: newStatus as Status,
         });
 
@@ -426,6 +426,7 @@ export class TestimoniosService {
             category_id: query.category_id,
             tag_id: query.tag_id,
             organization_id: query.organization_id,
+            status: StatusS.APROBADO,
             page,
             limit,
         });
@@ -482,5 +483,30 @@ export class TestimoniosService {
         Logger.log(`FFFFFFFFfindById: testimonio.status=${testimonio.status}`);
         return testimonio;
     }
+
+    async findAll(
+  organizationId: string,
+  query: GetTestimoniosQueryDto
+): Promise<{ data: Testimonio[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+  const page = query.page && query.page > 0 ? query.page : 1;
+  const limit = query.limit && query.limit > 0 ? query.limit : 20;
+
+  const [items, total] = await this.repo.findPublicWithFilters({
+    organization_id: organizationId,
+    page,
+    limit,
+    // puedes agregar filtros opcionales: category_id, tag_id, status
+  });
+
+  return {
+    data: items,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
 
 }
