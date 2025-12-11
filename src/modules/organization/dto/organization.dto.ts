@@ -25,10 +25,6 @@ export class AddOrganizationMemberDto {
   @IsEmail()
   @IsNotEmpty()
   email: string;
-
-  @IsEnum(Role)
-  @IsNotEmpty()
-  role: Role;
 }
 
 export class UpdateOrganizationMemberRoleDto {

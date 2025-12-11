@@ -197,31 +197,43 @@ export class OrganizationController {
   // MEMBERS → ADD
   // ======================================================
   @Post(":organizationId/members")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth("access-token")
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: "Agregar miembro" })
-  @ApiBody({ type: AddOrganizationMemberDto })
-  @ApiCreatedResponse({ description: "Miembro agregado correctamente" })
-  @ApiUnauthorizedResponse()
-  @ApiForbiddenResponse()
-  @ApiBadRequestResponse()
-  async addMember(
-    @Param("organizationId", ParseUUIDPipe) organizationId: string,
-    @Body() dto: AddOrganizationMemberDto,
-    @Req() req,
-  ) {
-    const { user } = req;
-    const userOrg = user.organizations.find(o => o.id === organizationId);
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth("access-token")
+@Roles(Role.ADMIN, Role.SUPERADMIN)
+@ApiOperation({ summary: "Agregar miembro" })
 
-    if (userOrg.role === Role.ADMIN && dto.role === Role.SUPERADMIN) {
-      throw new UnauthorizedException("Un administrador no puede agregar SUPERADMIN.");
-    }
+// Aquí agregamos el parámetro para Swagger:
+@ApiParam({
+  name: "organizationId",
+  type: "string",
+  required: true,
+  description: "ID de la organización",
+})
 
-    Logger.log(`addMember: userId=${user.id}, organizationId=${organizationId}`);
+@ApiBody({ type: AddOrganizationMemberDto })
+@ApiCreatedResponse({ description: "Miembro agregado correctamente" })
+@ApiUnauthorizedResponse()
+@ApiForbiddenResponse()
+@ApiBadRequestResponse()
+async addMember(
+  @Param("organizationId", ParseUUIDPipe) organizationId: string,
+  @Body() dto: AddOrganizationMemberDto,
+  @Req() req,
+) {
+  const { user } = req;
 
-    return this.organizationService.addMember(organizationId, dto);
-  }
+  //validamos si el usaurios existe con un rol de admin en nuestra organizacion en la misma organizacion
+  const userOrg = user.organizations.find(o => o.id === organizationId);
+
+  // if (userOrg.role === Role.ADMIN ) {
+  //   throw new UnauthorizedException("Un administrador no puede agregar un administrador.");
+  // }
+
+  Logger.log(`addMember: userId=${user.id}, organizationId=${organizationId}`);
+
+  return this.organizationService.addMember(organizationId, dto);
+}
+
 
   // ======================================================
   // MEMBERS → REMOVE

@@ -114,38 +114,38 @@ export class OrganizationService {
         }
     }
 
-    async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto): Promise<OrganizationUser> {
-        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
-        if (!organization) {
-            throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
-        }
-
-        const user = await this.usersRepository.findOneBy({ email: addMemberDto.email });
-        if (!user) {
-            throw new NotFoundException(`Usuario con email ${addMemberDto.email} no encontrado.`);
-        }
-
-        // const existingMember = await this.organizationUserRepository.findOne({
-        //     where: { organization: { id: organizationId }, user: { id: user.id } },
-        // });
-
-        // // Revisar si ya existe una relación para evitar duplicados
-        // if (existingMember) {
-        //     throw new BadRequestException('El usuario ya es miembro de esta organización.');
-        // }
-        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
-
-        if (user.organizations[0].role === Role.ADMIN && addMemberDto.role === Role.ADMIN) {
-            throw new BadRequestException('No puedes agregar un admin a una organización.');
-        }
-
-        const newMember = this.organizationUserRepository.create({
-            organization,
-            user,
-            role: addMemberDto.role,
-        });
-        return this.organizationUserRepository.save(newMember);
+    // En OrganizationService
+async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto): Promise<OrganizationUser> {
+    
+    // 1. Verificar si la Organización existe
+    const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+    if (!organization) {
+        throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
     }
+
+    // 2. Verificar si el Usuario (a ser agregado) existe por email
+    const user = await this.usersRepository.findOneBy({ email: addMemberDto.email });
+    if (!user) {
+        throw new NotFoundException(`Usuario con email ${addMemberDto.email} no encontrado.`);
+    }
+
+    // 3. Verificar si el usuario YA es miembro
+    const userExists = await this.organizationUserRepository.findOne({
+        where: { organization: { id: organizationId }, user: { id: user.id } }, // Usar user.id
+    });
+    if (userExists || userExists === Role.ADMIN) {
+        throw new BadRequestException('El usuario ya es miembro de esta organización.');
+    }
+
+    // 4. Crear y Guardar la nueva entidad OrganizationUser
+    const newMember = this.organizationUserRepository.create({
+        organization: organization, // Pasar el objeto Organization
+        user: user,                 // Pasar el objeto User
+        role: Role.EDITOR, // Usar el rol del DTO, o por defecto EDITOR
+    });
+    
+    return this.organizationUserRepository.save(newMember); // Guardar la nueva relación
+}
 
     async addMemberById(organizationId: string, userId: string, role: Role = Role.EDITOR): Promise<OrganizationUser> {
         const organization = await this.organizationRepository.findOneBy({ id: organizationId });
