@@ -344,7 +344,7 @@ async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto):
         await this.organizationRepository.save(organization);
 
         // Crear categorías por defecto
-        const defaultCategories = ['producto', 'evento', 'cliente', 'industria'];
+        const defaultCategories = ['producto', 'evento', 'cliente', 'industria', 'negativo', 'positivo', 'neutral'];
         const categoriesToCreate = defaultCategories.map(name =>
             this.categoryRepository.create({ name, organization }),
         );
