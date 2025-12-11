@@ -167,14 +167,12 @@ export class AuthService {
     });
 
     // Crear registro temporal del refresh token
-    const tokenRecord = await this.authTokenRepository.save(
-      this.authTokenRepository.create({
-        refresh_token_hash: '',
-        user_id: user.id,
-        expires_at:new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-        created_at: new Date(),
-      }),
-    );
+    const tokenRecord = this.authTokenRepository.create({
+      refresh_token_hash: '',
+      user: user,
+      expires_at: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      created_at: new Date(),
+    });
 
     // Payloads
     const accessPayload = {
@@ -265,7 +263,7 @@ export class AuthService {
     // Crear el registro del token primero para obtener el ID
     const newTokenEntity = this.authTokenRepository.create({
       refresh_token_hash: '',
-      user_id: user.id,
+      user: user,
       expires_at: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       created_at: new Date(),
     });
