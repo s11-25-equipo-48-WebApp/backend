@@ -116,7 +116,7 @@ export class AuthService {
 
     return this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '1000h',
+      expiresIn: '1d',
     });
   }
 
@@ -171,7 +171,7 @@ export class AuthService {
       this.authTokenRepository.create({
         refresh_token_hash: '',
         user_id: user.id,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expires_at:new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
         created_at: new Date(),
       }),
     );
@@ -191,12 +191,12 @@ export class AuthService {
     // Firmar tokens
     const accessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '1000h',
+      expiresIn: '1d',
     });
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
+      expiresIn: '1d',
     });
 
     // Guardar hash del refresh token
@@ -257,14 +257,14 @@ export class AuthService {
 
     const newAccessToken = this.jwtService.sign(accessPayload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '1000h',
+      expiresIn: '1d',
     });
 
     // Crear el registro del token primero para obtener el ID
     const newTokenEntity = this.authTokenRepository.create({
       refresh_token_hash: '',
       user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       created_at: new Date(),
     });
 
@@ -278,7 +278,7 @@ export class AuthService {
 
     const newRefreshToken = this.jwtService.sign(refreshPayload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
+      expiresIn: '1d',
     });
 
     // Actualizar el hash del refresh token
