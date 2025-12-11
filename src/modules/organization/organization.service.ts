@@ -77,22 +77,11 @@ export class OrganizationService {
     async getOrganizationDetails(organizationId: string): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: organizationId },
-            relations: ['members', 'members.user', 'members.user.profile'], // Cargar miembros aquí también
         });
 
         if (!organization) {
             throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
         }
-
-        const approvedTestimonios = await this.testimoniosRepository.find({
-            where: {
-                organization: { id: organizationId },
-                status: StatusS.APROBADO,
-            },
-            relations: ['category', 'tags', 'author'],
-        });
-
-        organization.testimonios = approvedTestimonios;
 
         return organization;
     }
