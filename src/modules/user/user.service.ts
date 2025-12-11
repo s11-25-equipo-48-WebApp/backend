@@ -82,10 +82,10 @@ export class UserService {
       const { avatar_url, bio, metadata, ...userData } = updateUserDto;
 
       // Actualizar datos del usuario (name, email)
-      if (Object.keys(userData).length > 0) {
-        Object.assign(user, userData);
-        await this.userRepository.save(user);
-      }
+      // if (Object.keys(userData).length > 0) {
+      //   Object.assign(user, userData);
+      //   await this.userRepository.save(user);
+      // }
 
       // Actualizar o crear el perfil si hay datos de perfil
       if (avatar_url !== undefined || bio !== undefined || metadata !== undefined) {
@@ -102,7 +102,6 @@ export class UserService {
             user_id: userId,
             avatar_url: avatar_url || null,
             bio: bio || '',
-            metadata: metadata || {},
           });
 
           await this.userProfileRepository.save(newProfile);

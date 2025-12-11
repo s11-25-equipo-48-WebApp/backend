@@ -69,7 +69,7 @@ export class Testimonio {
   @Column({ type: 'timestamptz', nullable: true })
   approved_at?: Date | null;
 
-  @Column({ type: "enum", enum: StatusS, default: StatusS.PENDIENTE })
+  @Column({ type: "enum", enum: StatusS, default: 'pendiente' })
   status : StatusS;
 
   @CreateDateColumn({ type: 'timestamptz' })

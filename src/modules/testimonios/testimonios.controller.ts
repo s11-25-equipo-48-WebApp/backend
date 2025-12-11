@@ -88,7 +88,7 @@ export class TestimoniosController {
       media_type: created.media_type,
       author_name: created.author_name,
       author_email: created.author_email,
-      status: created.status,
+      status: 'pendiente',
       created_at: created.created_at,
     };
   }

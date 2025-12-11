@@ -479,7 +479,7 @@ export class TestimoniosService {
         if (!testimonio) {
             throw new NotFoundException(`Testimonio con id ${id} no encontrado`);
         }
-
+        Logger.log(`FFFFFFFFfindById: testimonio.status=${testimonio.status}`);
         return testimonio;
     }
 }

@@ -318,37 +318,37 @@ async addMember(
   // ======================================================
   // MEMBERS → REGISTER (ID or EMAIL)
   // ======================================================
-  @Post(":organizationId/members/register")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth("access-token")
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
-  @ApiOperation({ summary: "Registrar miembro por ID o email" })
-  @ApiBody({ type: CreateOrganizationMemberDto })
-  @ApiCreatedResponse({ description: "Miembro registrado correctamente" })
-  @ApiBadRequestResponse()
-  @ApiUnauthorizedResponse()
-  @ApiForbiddenResponse()
-  async registerMember(
-    @Param("organizationId", ParseUUIDPipe) organizationId: string,
-    @Body() dto: CreateOrganizationMemberDto,
-    @Req() req,
-  ) {
-    const { user } = req;
-    const userOrg = user.organizations.find(o => o.id === organizationId);
+  // @Post(":organizationId/members/register")
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @ApiBearerAuth("access-token")
+  // @Roles(Role.ADMIN, Role.SUPERADMIN)
+  // @ApiOperation({ summary: "Registrar miembro por ID o email" })
+  // @ApiBody({ type: CreateOrganizationMemberDto })
+  // @ApiCreatedResponse({ description: "Miembro registrado correctamente" })
+  // @ApiBadRequestResponse()
+  // @ApiUnauthorizedResponse()
+  // @ApiForbiddenResponse()
+  // async registerMember(
+  //   @Param("organizationId", ParseUUIDPipe) organizationId: string,
+  //   @Body() dto: CreateOrganizationMemberDto,
+  //   @Req() req,
+  // ) {
+  //   const { user } = req;
+  //   const userOrg = user.organizations.find(o => o.id === organizationId);
 
-    if (userOrg.role === Role.ADMIN && dto.role === Role.SUPERADMIN) {
-      throw new UnauthorizedException("Un administrador no puede asignar SUPERADMIN.");
-    }
+  //   if (userOrg.role === Role.ADMIN && dto.role === Role.SUPERADMIN) {
+  //     throw new UnauthorizedException("Un administrador no puede asignar SUPERADMIN.");
+  //   }
 
-    if (dto.userId) {
-      return this.organizationService.addMemberById(organizationId, dto.userId, dto.role);
-    }
-    if (dto.email) {
-      return this.organizationService.addMemberByEmail(organizationId, dto.email, dto.role);
-    }
+  //   if (dto.userId) {
+  //     return this.organizationService.addMemberById(organizationId, dto.userId, dto.role);
+  //   }
+  //   if (dto.email) {
+  //     return this.organizationService.addMemberByEmail(organizationId, dto.email, dto.role);
+  //   }
 
-    throw new BadRequestException("Debe proporcionar userId o email.");
-  }
+  //   throw new BadRequestException("Debe proporcionar userId o email.");
+  // }
 
   // ======================================================
   // MEMBERS → DETAILS
