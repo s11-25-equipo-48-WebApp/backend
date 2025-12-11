@@ -27,7 +27,8 @@ export class RefreshTokenInterceptor implements NestInterceptor {
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
             path: '/',
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+
           });
           
           this.logger.log('[REFRESH TOKEN INTERCEPTOR] Cookie establecida correctamente');
