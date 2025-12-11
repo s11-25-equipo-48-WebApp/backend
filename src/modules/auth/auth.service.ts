@@ -228,14 +228,16 @@ export class AuthService {
   async refresh(user: any) {
     this.logger.debug(`Iniciando refresh para el usuario: ${user.id}`);
 
-    // Comprobar el token en la bd
-    const tokenInDb = await this.authTokenRepository.findOne({ where: { user_id: user.id } });
-    if (!tokenInDb) {
+    // Revocar específicamente el token validado por la estrategia
+    const currentToken: AuthToken | undefined = user.authToken;
+    if (!currentToken) {
+      // Si la estrategia no adjuntó el token, no continuamos
       throw new UnauthorizedException('Token de refresco no validado por la estrategia.');
     }
-    // Borrar el token si existe y se ha expirado
-    tokenInDb.revoked = true;
-    //await this.authTokenRepository.save(tokenInDb);
+
+    // Revocar el token usado para este refresh y persistirlo
+    currentToken.revoked = true;
+    await this.authTokenRepository.save(currentToken);
 
     // Obtener organizaciones
     const userOrganizations = await this.organizationUserRepository.find({
