@@ -40,7 +40,7 @@ export class CategoriesController {
   // GET ALL
   // --------------------------------------------------------
   @Get()
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
+  //@Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({
     summary: 'Listar categorías',
     description:
