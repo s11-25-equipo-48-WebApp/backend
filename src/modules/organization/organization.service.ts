@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Organization } from "./entities/organization.entity";
 import { OrganizationUser } from "./entities/organization_user.entity";
 import { LessThan, Repository } from "typeorm";
@@ -104,37 +104,37 @@ export class OrganizationService {
     }
 
     // En OrganizationService
-async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto): Promise<OrganizationUser> {
-    
-    // 1. Verificar si la Organización existe
-    const organization = await this.organizationRepository.findOneBy({ id: organizationId });
-    if (!organization) {
-        throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
-    }
+    async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto): Promise<OrganizationUser> {
 
-    // 2. Verificar si el Usuario (a ser agregado) existe por email
-    const user = await this.usersRepository.findOneBy({ email: addMemberDto.email });
-    if (!user) {
-        throw new NotFoundException(`Usuario con email ${addMemberDto.email} no encontrado.`);
-    }
+        // 1. Verificar si la Organización existe
+        const organization = await this.organizationRepository.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new NotFoundException(`Organización con ID ${organizationId} no encontrada.`);
+        }
 
-    // 3. Verificar si el usuario YA es miembro
-    const userExists = await this.organizationUserRepository.findOne({
-        where: { organization: { id: organizationId }, user: { id: user.id } }, // Usar user.id
-    });
-    if (userExists || userExists === Role.ADMIN) {
-        throw new BadRequestException('El usuario ya es miembro de esta organización.');
-    }
+        // 2. Verificar si el Usuario (a ser agregado) existe por email
+        const user = await this.usersRepository.findOneBy({ email: addMemberDto.email });
+        if (!user) {
+            throw new NotFoundException(`Usuario con email ${addMemberDto.email} no encontrado.`);
+        }
 
-    // 4. Crear y Guardar la nueva entidad OrganizationUser
-    const newMember = this.organizationUserRepository.create({
-        organization: organization, // Pasar el objeto Organization
-        user: user,                 // Pasar el objeto User
-        role: Role.EDITOR, // Usar el rol del DTO, o por defecto EDITOR
-    });
-    
-    return this.organizationUserRepository.save(newMember); // Guardar la nueva relación
-}
+        // 3. Verificar si el usuario YA es miembro
+        const userExists = await this.organizationUserRepository.findOne({
+            where: { organization: { id: organizationId }, user: { id: user.id } }, // Usar user.id
+        });
+        if (userExists) {
+            throw new BadRequestException('El usuario ya es miembro de esta organización.');
+        }
+
+        // 4. Crear y Guardar la nueva entidad OrganizationUser
+        const newMember = this.organizationUserRepository.create({
+            organization: organization, // Pasar el objeto Organization
+            user: user,                 // Pasar el objeto User
+            role: addMemberDto.role ?? Role.EDITOR // Usar el rol del DTO, o por defecto EDITOR
+        });
+
+        return this.organizationUserRepository.save(newMember); // Guardar la nueva relación
+    }
 
     async addMemberById(organizationId: string, userId: string, role: Role = Role.EDITOR): Promise<OrganizationUser> {
         const organization = await this.organizationRepository.findOneBy({ id: organizationId });
@@ -201,37 +201,89 @@ async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto):
         });
         return this.organizationUserRepository.save(newMember);
     }
-
-    async removeMember(organizationId: string, userId: string): Promise<void> {
-        const result = await this.organizationUserRepository.delete({
-            organization: { id: organizationId },
-            user: { id: userId },
-        });
-        if (result.affected === 0) {
-            throw new NotFoundException(`Miembro con ID de usuario ${userId} no encontrado en la organización ${organizationId}.`);
-        }
-    }
-
-    async updateMemberRole(
+    //eliminar un mimbro de una organizacion en especifico 
+    async removeMemberFromOrganization(
         organizationId: string,
-        userId: string,
-        updateRoleDto: UpdateOrganizationMemberRoleDto,
-    ): Promise<OrganizationUser> {
-        const member = await this.organizationUserRepository.findOne({
-            where: { organization: { id: organizationId }, user: { id: userId } },
+        userIdToRemove: string,
+        requestingUserId: string
+    ): Promise<void> {
+        // 1️⃣ Traer la organización con los miembros
+        const org = await this.organizationRepository.findOne({
+            where: { id: organizationId },
+            relations: ['members', 'members.user'],
         });
-        if (!member) {
-            throw new NotFoundException(`Miembro con ID de usuario ${userId} no encontrado en la organización ${organizationId}.`);
-        }
-        member.role = updateRoleDto.role;
+        if (!org) throw new NotFoundException("Organización no encontrada.");
 
-        // berificiar si el usuario es admin de la organizacion y no puede ser agregado
+        // 2️⃣ Buscar al miembro a eliminar
+        const target = org.members.find(m => m.user.id === userIdToRemove);
+        if (!target) throw new NotFoundException("Miembro no encontrado en esta organización.");
 
-        if (member.user.organizations[0].role === Role.ADMIN && updateRoleDto.role === Role.ADMIN) {
-            throw new BadRequestException('No puedes agregar un admin a una organización.');
+        // 3️⃣ Validar roles y permisos
+        const requestingMember = org.members.find(m => m.user.id === requestingUserId);
+        if (!requestingMember) {
+            throw new UnauthorizedException("No perteneces a esta organización.");
         }
-        return this.organizationUserRepository.save(member);
+
+        const isTargetProtected = target.role === Role.ADMIN || target.role === Role.SUPERADMIN;
+
+        if (requestingMember.role === Role.ADMIN) {
+            if (requestingUserId === userIdToRemove || isTargetProtected) {
+                throw new UnauthorizedException(
+                    "Un administrador no puede eliminar admin/superadmin ni eliminarse a sí mismo.",
+                );
+            }
+        }
+
+        // 4️⃣ Eliminar usando la entidad concreta
+        await this.organizationUserRepository.remove(target);
     }
+
+
+
+
+    async updateMemberRoleInOrganization(
+        organizationId: string,
+        targetUserId: string,
+        requestingUserId: string,
+        newRole: Role,
+    ): Promise<OrganizationUser> {
+
+        // 1️⃣ Traer la organización con los miembros
+        const org = await this.organizationRepository.findOne({
+            where: { id: organizationId },
+            relations: ['members', 'members.user'],
+        });
+        if (!org) throw new NotFoundException("Organización no encontrada.");
+
+        // 2️⃣ Buscar al miembro a actualizar
+        const target = org.members.find(m => m.user.id === targetUserId);
+        if (!target) throw new NotFoundException("Miembro no encontrado en esta organización.");
+
+        // 3️⃣ Buscar al usuario que hace la acción
+        const requestingMember = org.members.find(m => m.user.id === requestingUserId);
+        if (!requestingMember) throw new UnauthorizedException("No perteneces a esta organización.");
+
+        // 4️⃣ Validar roles según reglas de negocio
+        if (requestingMember.role === Role.ADMIN) {
+            if (target.role === Role.SUPERADMIN) {
+                throw new UnauthorizedException("Un administrador no puede modificar SUPERADMIN.");
+            }
+            if (target.role === Role.ADMIN && newRole !== Role.ADMIN) {
+                throw new UnauthorizedException("No puedes degradar a otro admin.");
+            }
+            if (requestingUserId === targetUserId && newRole !== Role.ADMIN) {
+                throw new UnauthorizedException("No puedes degradarte a ti mismo.");
+            }
+            if (newRole === Role.SUPERADMIN) {
+                throw new UnauthorizedException("Un admin no puede asignar SUPERADMIN.");
+            }
+        }
+
+        // 5️⃣ Actualizar y guardar
+        target.role = newRole;
+        return this.organizationUserRepository.save(target);
+    }
+
 
     async getOrganizationMembers(organizationId: string): Promise<OrganizationMemberDto[]> {
         const members = await this.organizationUserRepository.find({
@@ -397,24 +449,23 @@ async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto):
         return { organizations: organizationsPayload, newAccessToken, newRefreshToken };
     }
 
-    /**
-     * Obtiene todas las solicitudes de unión pendientes (usuarios inactivos) para una organización.
-     * @param organizationId El ID de la organización.
-     * @returns Una lista de objetos OrganizationMemberDto para usuarios pendientes.
-     */
-    async getPendingJoinRequests(organizationId: string): Promise<OrganizationMemberDto[]> {
+    async getPendingJoinRequestsForOrganization(
+        organizationId: string
+    ): Promise<OrganizationMemberDto[]> {
+        // 1️⃣ Traer todos los miembros pendientes (is_active = false)
         const pendingMembers = await this.organizationUserRepository.find({
             where: {
                 organization: { id: organizationId },
-                is_active: false,
             },
             relations: ['user', 'user.profile'],
         });
 
+        // 2️⃣ Retornar array vacío si no hay solicitudes pendientes
         if (!pendingMembers || pendingMembers.length === 0) {
-            return []; // O lanzar un NotFoundException si no hay solicitudes pendientes, según la lógica de negocio deseada
+            return [];
         }
 
+        // 3️⃣ Mapear a DTO limpio para la respuesta
         return pendingMembers.map(member => ({
             id: member.user.id,
             email: member.user.email,
@@ -422,50 +473,52 @@ async addMember(organizationId: string, addMemberDto: AddOrganizationMemberDto):
             bio: member.user.profile?.bio || null,
             avatarUrl: member.user.profile?.avatar_url || null,
             role: member.role,
-            is_active: member.is_active, // Usar member.is_active para mostrar el estado correcto
+            is_active: member.is_active,
             createdAt: member.createdAt,
         }));
     }
 
-    /**
-     * Aprueba una solicitud de unión, activando al miembro de la organización.
-     * @param organizationId El ID de la organización.
-     * @param userId El ID del usuario cuya solicitud se va a aprobar.
-     * @returns El objeto OrganizationUser actualizado.
-     */
-    async approveJoinRequest(organizationId: string, userId: string): Promise<OrganizationUser> {
+
+
+    async approveJoinRequestForOrganization(
+        organizationId: string,
+        userId: string
+    ): Promise<OrganizationUser> {
         const member = await this.organizationUserRepository.findOne({
             where: {
                 organization: { id: organizationId },
                 user: { id: userId },
-                is_active: false, // Solo aprobar solicitudes pendientes
+                is_active: false, // Solo solicitudes pendientes
             },
         });
 
         if (!member) {
-            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+            throw new NotFoundException(
+                `Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`
+            );
         }
 
         member.is_active = true; // Activar al miembro
         return this.organizationUserRepository.save(member);
     }
 
-    /**
-     * Rechaza una solicitud de unión, eliminando al miembro de la organización.
-     * @param organizationId El ID de la organización.
-     * @param userId El ID del usuario cuya solicitud se va a rechazar.
-     */
-    async rejectJoinRequest(organizationId: string, userId: string): Promise<void> {
+    async rejectJoinRequestForOrganization(
+        organizationId: string,
+        userId: string
+    ): Promise<void> {
         const result = await this.organizationUserRepository.delete({
             organization: { id: organizationId },
             user: { id: userId },
-            is_active: false, // Solo rechazar solicitudes pendientes
+            is_active: false, // Solo solicitudes pendientes
         });
 
         if (result.affected === 0) {
-            throw new NotFoundException(`Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`);
+            throw new NotFoundException(
+                `Solicitud de unión pendiente para el usuario ${userId} en la organización ${organizationId} no encontrada.`
+            );
         }
     }
+
 
     /**
      * Obtiene una lista pública de todas las organizaciones con su ID, nombre y descripción.

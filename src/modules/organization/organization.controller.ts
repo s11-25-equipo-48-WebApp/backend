@@ -14,6 +14,7 @@ import {
   Logger,
   ParseUUIDPipe,
   Query,
+  NotFoundException,
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
@@ -197,42 +198,41 @@ export class OrganizationController {
   // MEMBERS → ADD
   // ======================================================
   @Post(":organizationId/members")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth("access-token")
-@Roles(Role.ADMIN, Role.SUPERADMIN)
-@ApiOperation({ summary: "Agregar miembro" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth("access-token")
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @ApiOperation({ summary: "Agregar miembro" })
 
-// Aquí agregamos el parámetro para Swagger:
-@ApiParam({
-  name: "organizationId",
-  type: "string",
-  required: true,
-  description: "ID de la organización",
-})
+  // Aquí agregamos el parámetro para Swagger:
+  @ApiParam({
+    name: "organizationId",
+    type: "string",
+    required: true,
+    description: "ID de la organización",
+  })
 
-@ApiBody({ type: AddOrganizationMemberDto })
-@ApiCreatedResponse({ description: "Miembro agregado correctamente" })
-@ApiUnauthorizedResponse()
-@ApiForbiddenResponse()
-@ApiBadRequestResponse()
-async addMember(
-  @Param("organizationId", ParseUUIDPipe) organizationId: string,
-  @Body() dto: AddOrganizationMemberDto,
-  @Req() req,
-) {
-  const { user } = req;
+  @ApiBody({ type: AddOrganizationMemberDto })
+  @ApiCreatedResponse({ description: "Miembro agregado correctamente" })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiBadRequestResponse()
+  async addMember(
+    @Param("organizationId", ParseUUIDPipe) organizationId: string,
+    @Body() dto: AddOrganizationMemberDto,
+    @Req() req,
+  ) {
+    const { user } = req;
 
-  //validamos si el usaurios existe con un rol de admin en nuestra organizacion en la misma organizacion
-  const userOrg = user.organizations.find(o => o.id === organizationId);
+    //validamos si el usaurios existe con un rol de admin en nuestra organizacion en la misma organizacion
+    const userOrg = user.organizations.find(o => o.id === organizationId);
 
-  // if (userOrg.role === Role.ADMIN ) {
-  //   throw new UnauthorizedException("Un administrador no puede agregar un administrador.");
-  // }
+    if (!userOrg || (userOrg.role !== Role.ADMIN && userOrg.role !== Role.SUPERADMIN)) {
+      throw new UnauthorizedException("No tienes permisos para agregar miembros.");
+    }
+    Logger.log(`addMember: userId=${user.id}, organizationId=${organizationId}`);
 
-  Logger.log(`addMember: userId=${user.id}, organizationId=${organizationId}`);
-
-  return this.organizationService.addMember(organizationId, dto);
-}
+    return this.organizationService.addMember(organizationId, dto);
+  }
 
 
   // ======================================================
@@ -253,25 +253,24 @@ async addMember(
     @Req() req,
   ) {
     const { user } = req;
+
+    // 1️⃣ Validar que el usuario pertenece a la organización
     const userOrg = user.organizations.find(o => o.id === organizationId);
-
-    const org = await this.organizationService.getOrganizationDetails(organizationId);
-    const target = org.members.find(m => m.user.id === userId);
-
-    const isTargetProtected =
-      target?.role === Role.ADMIN || target?.role === Role.SUPERADMIN;
-
-    if (userOrg.role === Role.ADMIN) {
-      if (user.id === userId || isTargetProtected) {
-        throw new UnauthorizedException(
-          "Un administrador no puede eliminar admin/superadmin ni eliminarse a sí mismo.",
-        );
-      }
+    if (!userOrg) {
+      throw new UnauthorizedException("No perteneces a esta organización.");
     }
 
-    await this.organizationService.removeMember(organizationId, userId);
+    // 2️⃣ Llamar al service para eliminar el miembro
+    await this.organizationService.removeMemberFromOrganization(
+      organizationId,
+      userId,
+      user.id,   // id del usuario que hace la acción
+    );
+
     return { message: "Miembro eliminado exitosamente" };
   }
+
+
 
   // ======================================================
   // MEMBERS → UPDATE ROLE
@@ -292,63 +291,20 @@ async addMember(
     @Req() req,
   ) {
     const { user } = req;
+
+    // 1️⃣ Verificar que el usuario pertenece a la organización
     const userOrg = user.organizations.find(o => o.id === organizationId);
+    if (!userOrg) throw new UnauthorizedException("No perteneces a esta organización.");
 
-    if (userOrg.role === Role.ADMIN) {
-      const org = await this.organizationService.getOrganizationDetails(organizationId);
-      const target = org.members.find(m => m.user.id === userId);
-
-      if (target?.role === Role.SUPERADMIN) {
-        throw new UnauthorizedException("Un administrador no puede modificar SUPERADMIN.");
-      }
-      if (target?.role === Role.ADMIN && dto.role !== Role.ADMIN) {
-        throw new UnauthorizedException("No puedes degradar a otro admin.");
-      }
-      if (user.id === userId && dto.role !== Role.ADMIN) {
-        throw new UnauthorizedException("No puedes degradarte a ti mismo.");
-      }
-      if (dto.role === Role.SUPERADMIN) {
-        throw new UnauthorizedException("Un admin no puede asignar SUPERADMIN.");
-      }
-    }
-
-    return this.organizationService.updateMemberRole(organizationId, userId, dto);
+    // 2️⃣ Llamar al service para hacer la actualización
+    return this.organizationService.updateMemberRoleInOrganization(
+      organizationId,
+      userId,
+      user.id,   // id del usuario que hace la acción
+      dto.role,
+    );
   }
 
-  // ======================================================
-  // MEMBERS → REGISTER (ID or EMAIL)
-  // ======================================================
-  // @Post(":organizationId/members/register")
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @ApiBearerAuth("access-token")
-  // @Roles(Role.ADMIN, Role.SUPERADMIN)
-  // @ApiOperation({ summary: "Registrar miembro por ID o email" })
-  // @ApiBody({ type: CreateOrganizationMemberDto })
-  // @ApiCreatedResponse({ description: "Miembro registrado correctamente" })
-  // @ApiBadRequestResponse()
-  // @ApiUnauthorizedResponse()
-  // @ApiForbiddenResponse()
-  // async registerMember(
-  //   @Param("organizationId", ParseUUIDPipe) organizationId: string,
-  //   @Body() dto: CreateOrganizationMemberDto,
-  //   @Req() req,
-  // ) {
-  //   const { user } = req;
-  //   const userOrg = user.organizations.find(o => o.id === organizationId);
-
-  //   if (userOrg.role === Role.ADMIN && dto.role === Role.SUPERADMIN) {
-  //     throw new UnauthorizedException("Un administrador no puede asignar SUPERADMIN.");
-  //   }
-
-  //   if (dto.userId) {
-  //     return this.organizationService.addMemberById(organizationId, dto.userId, dto.role);
-  //   }
-  //   if (dto.email) {
-  //     return this.organizationService.addMemberByEmail(organizationId, dto.email, dto.role);
-  //   }
-
-  //   throw new BadRequestException("Debe proporcionar userId o email.");
-  // }
 
   // ======================================================
   // MEMBERS → DETAILS
@@ -400,10 +356,14 @@ async addMember(
   @ApiForbiddenResponse()
   @ApiNotFoundResponse()
   async getPendingMembers(
-    @Param("organizationId", ParseUUIDPipe) organizationId: string,
-  ) {
-    return this.organizationService.getPendingJoinRequests(organizationId);
+  @Param("organizationId", ParseUUIDPipe) organizationId: string,
+) {
+  if (!organizationId || organizationId.length !== 36) {
+    throw new BadRequestException("ID de organización inválido");
   }
+  return this.organizationService.getPendingJoinRequestsForOrganization(organizationId);
+}
+
 
   // ======================================================
   // MEMBERS → APPROVE
@@ -420,8 +380,19 @@ async addMember(
   async approveMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
+    @Req() req,
   ) {
-    await this.organizationService.approveJoinRequest(organizationId, userId);
+    const { user } = req;
+
+    // 1️⃣ Validar que el usuario pertenece a la organización
+    const userOrg = user.organizations.find(o => o.id === organizationId);
+    if (!userOrg) {
+      throw new UnauthorizedException("No perteneces a esta organización.");
+    }
+
+    // 2️⃣ Llamar al service
+    await this.organizationService.approveJoinRequestForOrganization(organizationId, userId);
+
     return { message: "Solicitud aprobada exitosamente." };
   }
 
@@ -440,8 +411,20 @@ async addMember(
   async rejectMember(
     @Param("organizationId", ParseUUIDPipe) organizationId: string,
     @Param("userId", ParseUUIDPipe) userId: string,
+    @Req() req,
   ) {
-    await this.organizationService.rejectJoinRequest(organizationId, userId);
+    const { user } = req;
+
+    // 1️⃣ Validar que el usuario pertenece a la organización
+    const userOrg = user.organizations.find(o => o.id === organizationId);
+    if (!userOrg) {
+      throw new UnauthorizedException("No perteneces a esta organización.");
+    }
+
+    // 2️⃣ Llamar al service
+    await this.organizationService.rejectJoinRequestForOrganization(organizationId, userId);
+
     return { message: "Solicitud rechazada exitosamente." };
   }
+
 }
