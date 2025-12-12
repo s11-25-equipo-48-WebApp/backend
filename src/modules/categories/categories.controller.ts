@@ -31,12 +31,16 @@ import { Role } from '../organization/entities/enums';
 
 @ApiTags('Categories')
 @Controller('organizations/:organizationId/categories')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('access-token')
 export class CategoriesController {
   constructor(private readonly service: CategoriesService) {}
+
   // --------------------------------------------------------
   // GET ALL
   // --------------------------------------------------------
   @Get()
+  //@Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR, Role.VISITOR)
   @ApiOperation({
     summary: 'Listar categorías',
     description:
