@@ -210,25 +210,16 @@ export class UserService {
 
   // ver todos mis testimonios de todas las organizaciones
   async findMyTestimonios(userId: string): Promise<Testimonio[]> {
-    // 1. Traer relaciones usuario-organización
-    const orgUsers = await this.organizationUserRepository.find({
-      where: { user: { id: userId } },
-      relations: ['organization'],
-    });
+  return this.testimonioRepository
+    .createQueryBuilder('testimonio')
+    .leftJoinAndSelect('testimonio.organization', 'organization') // incluir info de la organización
+    .leftJoinAndSelect('testimonio.created_by_user', 'user')     // incluir info del autor
+    .where('testimonio.created_by_user_id = :userId', { userId }) // filtrar solo los creados por el usuario
+    .orderBy('testimonio.created_at', 'DESC')
+    .getMany();
+}
 
-    // 2. Extraer los IDs de las organizaciones
-    const orgIds = orgUsers.map(ou => ou.organization.id);
 
-    if (orgIds.length === 0) return [];
-
-    // 3. Buscar testimonios de todas esas organizaciones
-    return this.testimonioRepository.find({
-      where: {
-        organization: { id: In(orgIds) },
-      },
-      order: { created_at: 'DESC' },
-    });
-  }
 
   async findById(id: string, userId: string): Promise<Testimonio | null> {
   // 1. Obtener todas las organizaciones del usuario
@@ -282,24 +273,13 @@ async removeTestimonio(id: string, userId: string): Promise<{ message: string }>
 }
 
 async findMyPendingTestimonios(userId: string): Promise<Testimonio[]> {
-  // 1. Traer relaciones usuario-organización
-  const orgUsers = await this.organizationUserRepository.find({
-    where: { user: { id: userId } },
-    relations: ['organization'],
-  });
-
-  const orgIds = orgUsers.map(ou => ou.organization.id);
-
-  if (orgIds.length === 0) return [];
-
-  // 2. Buscar testimonios de todas esas organizaciones
-  return this.testimonioRepository.find({
-    where: {
-      organization: { id: In(orgIds) },
-      status: StatusS.PENDIENTE,
-    },
-    order: { created_at: 'DESC' },
-  });
+  return this.testimonioRepository
+    .createQueryBuilder('testimonio')
+    .leftJoinAndSelect('testimonio.organization', 'organization') // info de la organización
+    .leftJoinAndSelect('testimonio.created_by_user', 'user')     // info del autor
+    .where('testimonio.created_by_user_id = :userId', { userId }) // solo creados por el usuario
+    .andWhere('testimonio.status = :status', { status: StatusS.PENDIENTE }) // solo pendientes
+    .orderBy('testimonio.created_at', 'DESC')
+    .getMany();
 }
-
 }
