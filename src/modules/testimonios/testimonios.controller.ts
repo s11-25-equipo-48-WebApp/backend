@@ -44,7 +44,7 @@ export class TestimoniosController {
   constructor(private readonly testimoniosService: TestimoniosService) { }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
+  //@Roles(Role.ADMIN, Role.SUPERADMIN, Role.EDITOR)
   @ApiOperation({
     summary: 'Crear testimonio',
     description:

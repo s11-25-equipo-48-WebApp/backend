@@ -40,9 +40,11 @@ export class RefreshTokenInterceptor implements NestInterceptor {
         //
         // 🔥 3. Setear cookie HttpOnly + Secure
         //
+        const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+
         response.cookie('refresh-token', refreshToken, {
           httpOnly: true,
-          secure: true,
+          secure: isProd,
           sameSite: 'strict',
           expires,
           path: '/',

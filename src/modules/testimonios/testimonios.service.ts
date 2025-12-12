@@ -72,6 +72,7 @@ export class TestimoniosService {
             body: dto.body,
             category,
             tags,
+            status: dto.status || StatusS.PENDIENTE,    
             media_url: dto.media_url ?? null,
             media_type: dto.media_type,
             author_name: dto.author ?? null,

@@ -10,7 +10,7 @@ export class Organization {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 30 })
   name: string;
 
   @Column({ nullable: true })
@@ -29,7 +29,7 @@ export class Organization {
   tags: Tag[];
 
   @OneToOne(() => Embed, (e) => e.organizations)
-  @JoinColumn({ name: 'embed_id' }) 
+  @JoinColumn({ name: 'embed_id' })
   embed: Embed;
 
   @CreateDateColumn()
