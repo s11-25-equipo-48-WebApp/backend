@@ -72,7 +72,7 @@ export class TestimoniosService {
             body: dto.body,
             category,
             tags,
-            status: dto.status || StatusS.PENDIENTE,    
+            status: StatusS.PENDIENTE,    
             media_url: dto.media_url ?? null,
             media_type: dto.media_type,
             author_name: dto.author ?? null,
@@ -88,15 +88,15 @@ export class TestimoniosService {
         // - ADMIN y SUPERADMIN: El testimonio se crea con estado APROBADO automáticamente
         // - EDITOR y VISITOR: El testimonio se crea con estado PENDIENTE y requiere aprobación manual
         // ==========================================
-        const isAdminOrSuperAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
-        entity.status = isAdminOrSuperAdmin ? StatusS.APROBADO : StatusS.PENDIENTE;
+        //const isAdminOrSuperAdmin = userOrg.role === Role.ADMIN || userOrg.role === Role.SUPERADMIN;
+        //entity.status = isAdminOrSuperAdmin ? StatusS.APROBADO : StatusS.PENDIENTE;
         //entity.status = isAdminOrSuperAdmin ? Status.APROBADO : Status.PENDIENTE;
 
         // Si se aprueba automáticamente (ADMIN/SUPERADMIN), registrar quién y cuándo lo aprobó
-        if (entity.status === StatusS.APROBADO) {
-            entity.approved_by = user.id;
-            entity.approved_at = new Date();
-        }
+        // if (entity.status === StatusS.APROBADO) {
+        //     entity.approved_by = user.id;
+        //     entity.approved_at = new Date();
+        // }
 
         return this.repo.save(entity);
     }

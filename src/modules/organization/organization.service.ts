@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Organization } from "./entities/organization.entity";
 import { OrganizationUser } from "./entities/organization_user.entity";
-import { LessThan, Repository } from "typeorm";
+import { In, LessThan, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/modules/auth/entities/user.entity";
 import { AddOrganizationMemberDto, UpdateOrganizationDto, UpdateOrganizationMemberRoleDto, CreateOrganizationDto } from "./dto/organization.dto";
@@ -525,18 +525,49 @@ export class OrganizationService {
      * Este endpoint no requiere autenticación.
      * @returns Una lista de objetos con id, name y description de cada organización.
      */
-    async findAllOrganizationsPublic(page: number = 1, limit: number = 20): Promise<{ data: { id: string; name: string; description: string }[]; meta: { total: number; page: number; limit: number; totalPages: number; }; }> {
+    async findAllOrganizationsPublic(
+        page: number = 1,
+        limit: number = 20
+    ): Promise<{
+        data: { id: string; name: string; description: string; adminId: string | null }[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+    }> {
         const skip = (page - 1) * limit;
 
+        // Traemos organizaciones paginadas
         const [organizations, total] = await this.organizationRepository.findAndCount({
             select: ['id', 'name', 'description'],
             take: limit,
             skip: skip,
-            order: { name: 'ASC' }, // Ordenar por nombre para consistencia
+            order: { name: 'ASC' },
         });
 
+        // Traemos admins asociados a esas organizaciones
+        const admins = await this.organizationUserRepository.find({
+            where: {
+                role: Role.ADMIN,
+                is_active: true,
+                organization: { id: In(organizations.map(o => o.id)) }
+            },
+            relations: ['user', 'organization'],
+        });
+
+        // Mapeamos orgId → adminId
+        const adminMap = admins.reduce((acc, ou) => {
+            acc[ou.organization.id] = ou.user.id;
+            return acc;
+        }, {} as Record<string, string>);
+
+        // Armamos respuesta final
+        const data = organizations.map(org => ({
+            id: org.id,
+            name: org.name,
+            description: org.description,
+            adminId: adminMap[org.id] || null, // si no tiene admin
+        }));
+
         return {
-            data: organizations,
+            data,
             meta: {
                 total,
                 page,
@@ -545,4 +576,5 @@ export class OrganizationService {
             },
         };
     }
+
 }
