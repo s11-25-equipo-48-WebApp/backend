@@ -87,7 +87,6 @@ export class AuthController {
     @Req() req: RequestWithUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    await this.authService.logout(req.user);
     res.clearCookie('refresh-token');
     return { message: 'Logout exitoso' };
   }

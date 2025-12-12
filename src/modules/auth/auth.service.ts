@@ -289,13 +289,4 @@ export class AuthService {
   // ====================
   // Logout
   // ====================
-  async logout(user: any) {
-    await this.authTokenRepository.update({ user: { id: user.id } }, { revoked: true });
-
-    return {
-      id: user.id,
-      estado: user.is_active ? 'activo' : 'pendiente',
-      createdAt: user.created_at,
-    };
-  }
 }
