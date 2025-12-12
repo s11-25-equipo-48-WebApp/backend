@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from 'src/modules/organization/entities/organization_user.entity';
@@ -65,56 +65,56 @@ export class UserService {
   }
 
   async updateMe(userId: string, updateUserDto: UpdateUserDto): Promise<any> {
-  this.logger.log(`updateMe: userId: ${userId}`);
+    this.logger.log(`updateMe: userId: ${userId}`);
 
-  try {
-    // Buscar el usuario con su perfil
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['profile'],
-    });
+    try {
+      // Buscar el usuario con su perfil
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['profile'],
+      });
 
-    if (!user) {
-      throw new NotFoundException(`User with ID "${userId}" not found`);
-    }
-
-    const { avatar_url, ...userData } = updateUserDto;
-
-    // ------------------------------------
-    // Actualizar datos del usuario
-    // ------------------------------------
-    if (userData.name !== undefined) {
-      user.name = userData.name;
-    }
-
-    if (userData.last_name !== undefined) {
-      user.last_name = userData.last_name;
-    }
-
-    // Guardar siempre el usuario (actualiza updated_at)
-    await this.userRepository.save(user);
-
-    // ------------------------------------
-    // Actualizar / crear el perfil
-    // ------------------------------------
-    if (avatar_url !== undefined) {
-      if (user.profile) {
-        user.profile.avatar_url = avatar_url;
-        await this.userProfileRepository.save(user.profile);
+      if (!user) {
+        throw new NotFoundException(`User with ID "${userId}" not found`);
       }
+
+      const { avatar_url, ...userData } = updateUserDto;
+
+      // ------------------------------------
+      // Actualizar datos del usuario
+      // ------------------------------------
+      if (userData.name !== undefined) {
+        user.name = userData.name;
+      }
+
+      if (userData.last_name !== undefined) {
+        user.last_name = userData.last_name;
+      }
+
+      // Guardar siempre el usuario (actualiza updated_at)
+      await this.userRepository.save(user);
+
+      // ------------------------------------
+      // Actualizar / crear el perfil
+      // ------------------------------------
+      if (avatar_url !== undefined) {
+        if (user.profile) {
+          user.profile.avatar_url = avatar_url;
+          await this.userProfileRepository.save(user.profile);
+        }
+      }
+
+      // Retornar el usuario actualizado con su perfil
+      return this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['profile']
+      });
+
+    } catch (error) {
+      this.logger.error(`Error en updateMe: ${error.message}`, error.stack);
+      throw error;
     }
-
-    // Retornar el usuario actualizado con su perfil
-    return this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['profile']
-    });
-
-  } catch (error) {
-    this.logger.error(`Error en updateMe: ${error.message}`, error.stack);
-    throw error;
   }
-}
 
 
   async removeMe(id: string): Promise<void> {
@@ -207,4 +207,78 @@ export class UserService {
 
     return { message: 'Avatar actualizado correctamente', avatar_url: user.profile.avatar_url };
   }
+
+  // ver todos mis testimonios de todas las organizaciones
+  async findMyTestimonios(userId: string): Promise<Testimonio[]> {
+    // 1. Traer relaciones usuario-organización
+    const orgUsers = await this.organizationUserRepository.find({
+      where: { user: { id: userId } },
+      relations: ['organization'],
+    });
+
+    // 2. Extraer los IDs de las organizaciones
+    const orgIds = orgUsers.map(ou => ou.organization.id);
+
+    if (orgIds.length === 0) return [];
+
+    // 3. Buscar testimonios de todas esas organizaciones
+    return this.testimonioRepository.find({
+      where: {
+        organization: { id: In(orgIds) },
+      },
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async findById(id: string, userId: string): Promise<Testimonio | null> {
+  // 1. Obtener todas las organizaciones del usuario
+  const orgUsers = await this.organizationUserRepository.find({
+    where: { user: { id: userId } },
+    relations: ['organization'],
+  });
+
+  const orgIds = orgUsers.map(ou => ou.organization.id);
+
+  if (orgIds.length === 0) return null;
+
+  // 2. Buscar el testimonio que coincida con el ID y esté en esas organizaciones
+  return this.testimonioRepository.findOne({
+    where: {
+      id,
+      organization: { id: In(orgIds) },
+    },
+  });
+}
+
+async removeTestimonio(id: string, userId: string): Promise<{ message: string }> {
+  // 1. Traer las organizaciones del usuario
+  const orgUsers = await this.organizationUserRepository.find({
+    where: { user: { id: userId } },
+    relations: ['organization'],
+  });
+
+  const orgIds = orgUsers.map(ou => ou.organization.id);
+
+  if (orgIds.length === 0) {
+    throw new NotFoundException('No tienes organizaciones asociadas.');
+  }
+
+  // 2. Buscar el testimonio dentro de esas organizaciones
+  const testimonio = await this.testimonioRepository.findOne({
+    where: {
+      id,
+      organization: { id: In(orgIds) },
+    },
+  });
+
+  if (!testimonio) {
+    throw new NotFoundException('Testimonio no encontrado o no autorizado.');
+  }
+
+  // 3. Eliminar
+  await this.testimonioRepository.remove(testimonio);
+
+  return { message: 'Testimonio eliminado correctamente' };
+}
+
 }

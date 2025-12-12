@@ -5,6 +5,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nes
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JoinOrganizationDto } from './dto/join-organization.dto';
 import { UpdateAvatarDto } from './dto/updateAvatar.dto';
+import { get } from 'http';
 
 @ApiTags('user')
 @Controller('user')
@@ -115,4 +116,49 @@ export class UserController {
     }
     return this.userService.updateAvatar(req.user.id, updateAvatarDto);
   }
+
+  @Get('me/testimonios')
+  @ApiOperation({ summary: 'Obtener todos los testimonios aprobados de la organización al que pertenece el usuario' })
+  @ApiResponse({ status: 200, description: 'Lista de testimonios aprobados de la organización al que pertenece el usuario.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado.' })
+  async findMyTestimonios(@Req() req) {
+    const user = req.user;
+    Logger.log(`findMyTestimonios: userId: ${user.id}`);
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
+    }
+    return this.userService.findMyTestimonios(req.user.id);
+  }
+
+  @Get('me/testimonios/:id')
+    @ApiOperation({ summary: 'Obtener un testimonio por su ID' })
+    @ApiResponse({ status: 200, description: 'Testimonio encontrado' })
+    @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
+    async findById(
+      @Param('id') id: string,
+      @Req() req,
+    ) {
+      const user = req.user;
+      Logger.log(`findMyTestimonios: userId: ${user.id}`);
+      if (!user || !user.id) {
+        throw new UnauthorizedException('Usuario no autenticado.');
+      }
+      return this.userService.findById(id, req.user.id);
+    }
+
+    @Delete('me/testimonios/:id')
+@ApiOperation({ summary: 'Eliminar un testimonio del usuario' })
+@ApiResponse({ status: 200, description: 'Testimonio eliminado correctamente' })
+@ApiResponse({ status: 404, description: 'Testimonio no encontrado o no autorizado' })
+async remove(
+  @Param('id') id: string,
+  @Req() req,
+) {
+  const user = req.user;
+  if (!user || !user.id) {
+    throw new UnauthorizedException('Usuario no autenticado.');
+  }
+  return this.userService.removeTestimonio(id, user.id);
+}
 }
