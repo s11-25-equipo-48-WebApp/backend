@@ -4,7 +4,7 @@ import { In, Repository } from 'typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Organization } from 'src/modules/organization/entities/organization.entity';
 import { OrganizationUser } from 'src/modules/organization/entities/organization_user.entity';
-import { Testimonio } from 'src/modules/testimonios/entities/testimonio.entity';
+import { StatusS, Testimonio } from 'src/modules/testimonios/entities/testimonio.entity';
 import { UpdateTestimonioStatusDto } from './dto/update-testimonio-status.dto';
 import { User } from '../auth/entities/user.entity';
 import { UserProfile } from '../auth/entities/userProfile.entity';
@@ -279,6 +279,27 @@ async removeTestimonio(id: string, userId: string): Promise<{ message: string }>
   await this.testimonioRepository.remove(testimonio);
 
   return { message: 'Testimonio eliminado correctamente' };
+}
+
+async findMyPendingTestimonios(userId: string): Promise<Testimonio[]> {
+  // 1. Traer relaciones usuario-organización
+  const orgUsers = await this.organizationUserRepository.find({
+    where: { user: { id: userId } },
+    relations: ['organization'],
+  });
+
+  const orgIds = orgUsers.map(ou => ou.organization.id);
+
+  if (orgIds.length === 0) return [];
+
+  // 2. Buscar testimonios de todas esas organizaciones
+  return this.testimonioRepository.find({
+    where: {
+      organization: { id: In(orgIds) },
+      status: StatusS.PENDIENTE,
+    },
+    order: { created_at: 'DESC' },
+  });
 }
 
 }

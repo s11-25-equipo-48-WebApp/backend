@@ -131,34 +131,49 @@ export class UserController {
     return this.userService.findMyTestimonios(req.user.id);
   }
 
-  @Get('me/testimonios/:id')
-    @ApiOperation({ summary: 'Obtener un testimonio por su ID' })
-    @ApiResponse({ status: 200, description: 'Testimonio encontrado' })
-    @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
-    async findById(
-      @Param('id') id: string,
-      @Req() req,
-    ) {
-      const user = req.user;
-      Logger.log(`findMyTestimonios: userId: ${user.id}`);
-      if (!user || !user.id) {
-        throw new UnauthorizedException('Usuario no autenticado.');
-      }
-      return this.userService.findById(id, req.user.id);
+  @Get('me/testimonios/pending')
+  @ApiOperation({ summary: 'Obtener todos los testimonios pendientes de aprobación' })
+  @ApiResponse({ status: 200, description: 'Lista de testimonios pendientes de aprobación.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado.' })
+  async findMyPendingTestimonios(@Req() req) {
+    const user = req.user;
+    Logger.log(`findMyTestimonios: userId: ${user.id}`);
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
     }
-
-    @Delete('me/testimonios/:id')
-@ApiOperation({ summary: 'Eliminar un testimonio del usuario' })
-@ApiResponse({ status: 200, description: 'Testimonio eliminado correctamente' })
-@ApiResponse({ status: 404, description: 'Testimonio no encontrado o no autorizado' })
-async remove(
-  @Param('id') id: string,
-  @Req() req,
-) {
-  const user = req.user;
-  if (!user || !user.id) {
-    throw new UnauthorizedException('Usuario no autenticado.');
+    return this.userService.findMyPendingTestimonios(req.user.id);
   }
-  return this.userService.removeTestimonio(id, user.id);
-}
+
+  @Get('me/testimonios/:id')
+  @ApiOperation({ summary: 'Obtener un testimonio por su ID' })
+  @ApiResponse({ status: 200, description: 'Testimonio encontrado' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado' })
+  async findById(
+    @Param('id') id: string,
+    @Req() req,
+  ) {
+    const user = req.user;
+    Logger.log(`findMyTestimonios: userId: ${user.id}`);
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
+    }
+    return this.userService.findById(id, req.user.id);
+  }
+
+  @Delete('me/testimonios/:id')
+  @ApiOperation({ summary: 'Eliminar un testimonio del usuario' })
+  @ApiResponse({ status: 200, description: 'Testimonio eliminado correctamente' })
+  @ApiResponse({ status: 404, description: 'Testimonio no encontrado o no autorizado' })
+  async remove(
+    @Param('id') id: string,
+    @Req() req,
+  ) {
+    const user = req.user;
+    if (!user || !user.id) {
+      throw new UnauthorizedException('Usuario no autenticado.');
+    }
+    return this.userService.removeTestimonio(id, user.id);
+  }
+
 }
