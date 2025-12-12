@@ -546,7 +546,6 @@ export class OrganizationService {
         const admins = await this.organizationUserRepository.find({
             where: {
                 role: Role.ADMIN,
-                is_active: true,
                 organization: { id: In(organizations.map(o => o.id)) }
             },
             relations: ['user', 'organization'],
