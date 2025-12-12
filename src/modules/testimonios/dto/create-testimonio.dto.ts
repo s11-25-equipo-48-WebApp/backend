@@ -55,6 +55,7 @@ export class CreateTestimonioDto {
   @Validate(TagsExist)
   tags?: string[];
 
+  @IsOptional()
   @ApiProperty({
     description: 'Estado del testimonio (pendiente | aprobado | rechazado)',
     enum: StatusS,
